@@ -1,0 +1,9 @@
+.claude
+graphify-out/
+**/graphify-out/
+!./.opencode/agents/
+./.opencode/commands/*
+./.opencode/node_modules/*
+./.opencode/plugins/*
+./opencode/package*
+
