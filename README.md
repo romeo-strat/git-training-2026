@@ -1,93 +1,116 @@
-# ai
+# Terraform Concepts & Best Practices — training stages and capstone
 
+This is your Terraform course: nine training stages in `modules/`, followed by a capstone project. For each stage your trainer gives you a brief. You build the stage and write it up as you go, your trainer reviews both together, you revise, and the finished pair becomes teaching material for the next cohort.
 
+A note on words: a **module** in this repository is a *training stage*, not a Terraform module. Stage [M07](modules/m07-designing-reusable-terraform-modules/brief.md) is the one that teaches Terraform modules.
 
-## Getting started
+## What is in this repository
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+| Path | What it holds |
+| --- | --- |
+| `modules/` | The nine stage folders (M01–M09), each with a brief, a checklist and a write-up template |
+| `modules/m10-capstone/` | The capstone, with its own brief, checklist and write-up template |
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+The other folders are trainer material. You do not need them to do the stages.
 
-## Add your files
+## How a stage works
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+1. **Your trainer hands you the brief.** Each stage's `brief.md` says what to build and how you will know it is done: objective, scope, stack constraints, the named deliverable, a lab, a definition of done, and what to confirm with your trainer before you start. It contains no lesson, no steps, no code and no solutions. How to build it is yours to work out.
+2. **You build and write up the stage together.** Copy `write-up-template.md` to `write-up.md` in the stage folder and fill it in *while* you build, not after the build works. The "how to build it" section is the teaching content, so write it for someone who will follow it with no trainer to ask.
+3. **Your trainer reviews both together.** When you reach the definition of done, set Status to "In review". Your trainer reviews the working system and the write-up side by side. The question is not only "does it work?" but "could someone else learn from this?"
+4. **You revise.** Fix what the review finds, in both the build and the write-up, before starting the next stage.
+5. **The finished pair goes into the content library.** An accepted stage is the build plus its write-up. Your trainer decides what carries into the next cohort's plan.
 
-```
-cd existing_repo
-git remote add origin https://gitlab.stratpoint.cloud/cloud-internal-trainings/ai-sdlc/terraform-rnd-bootcamp/panis-romeo-ii/ai.git
-git branch -M main
-git push -uf origin main
-```
+Review happens at the end of every stage, not just at the end of the course. A write-up produced after the system already works tends to be thin; reviewing as you go is what keeps it good.
 
-## Integrate with your tools
+### What is in each stage folder
 
-- [ ] [Set up project integrations](https://gitlab.stratpoint.cloud/cloud-internal-trainings/ai-sdlc/terraform-rnd-bootcamp/panis-romeo-ii/ai/-/settings/integrations)
+| File | Who writes it | Purpose |
+| --- | --- | --- |
+| `brief.md` | Your trainer | What to build and how you will know it is done. Do not edit it. |
+| `write-up-template.md` | Your trainer | A blank template. Leave it untouched so the next cohort starts clean. |
+| `write-up.md` | You | Your copy of the template, filled in as you build. |
+| `tasks.md` | Your trainer | An ordered checklist for the stage, one task per scope topic, deliverable component, check and write-up section. You tick the boxes; it holds no answers and no steps. |
 
-## Collaborate with your team
+Your Terraform code lives outside this repository, in your own GitLab repository. Link it from the header of your write-up. The capstone folder has the same three files.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+## Stages
 
-## Test and Deploy
+| Stage | Title | Checklist | Theme | Leaves behind |
+| --- | --- | --- | --- | --- |
+| M01 | [Getting Started with Terraform](modules/m01-getting-started-with-terraform/brief.md) | [tasks](modules/m01-getting-started-with-terraform/tasks.md) | Workstation, sign-in with no static keys, providers and the lock file, then one resource taken through init, plan, apply, update and destroy | Nothing |
+| M02 | [Managing Terraform State](modules/m02-managing-terraform-state/brief.md) | [tasks](modules/m02-managing-terraform-state/tasks.md) | What local state is and why it is sensitive; moving it into a protected S3 backend with native locking | **The state bucket** |
+| M03 | [Managing Resources with Network Provisioning](modules/m03-managing-resources-with-network-provisioning/brief.md) | [tasks](modules/m03-managing-resources-with-network-provisioning/tasks.md) | Dependencies, repetition, data sources, a small VPC | Nothing |
+| M04 | [Defining Variables, Inputs and Outputs in Terraform](modules/m04-defining-variables-inputs-and-outputs-in-terraform/brief.md) | [tasks](modules/m04-defining-variables-inputs-and-outputs-in-terraform/tasks.md) | Typed, validated inputs; value precedence; locals; sensitive inputs and outputs | Nothing |
+| M05 | [Terraform for Multi-Environment Deployments](modules/m05-terraform-for-multi-environment-deployments/brief.md) | [tasks](modules/m05-terraform-for-multi-environment-deployments/tasks.md) | Dev and prod from one configuration; directory vs workspaces vs per-environment files compared | Bucket only |
+| M06 | [Advanced Terraform Configuration](modules/m06-advanced-terraform-configuration/brief.md) | [tasks](modules/m06-advanced-terraform-configuration/tasks.md) | `for_each` in depth, dynamic blocks, conditions, `for` expressions, data sources, dependency and lifecycle controls | Bucket only |
+| M07 | [Designing Reusable Terraform Modules](modules/m07-designing-reusable-terraform-modules/brief.md) | [tasks](modules/m07-designing-reusable-terraform-modules/tasks.md) | Reusable modules: structure, naming, comments, interfaces, consuming published modules | Bucket only |
+| M08 | [Change with Confidence: Safe Terraform Refactoring](modules/m08-change-with-confidence-safe-terraform-refactoring/brief.md) | [tasks](modules/m08-change-with-confidence-safe-terraform-refactoring/tasks.md) | Rename, adopt, stop managing — no destroys; reading plans as JSON; recovering from a failed apply | Bucket only |
+| M09 | [Going Multi-Cloud with Terraform](modules/m09-going-multi-cloud-with-terraform/brief.md) | [tasks](modules/m09-going-multi-cloud-with-terraform/tasks.md) | GCP and Azure sign-in and provider setup | Nothing |
 
-Use the built-in continuous integration in GitLab.
+Work the stages in order. Later stages build on earlier ones, and M02's bucket is reused by M05 and M06 to M08 and kept until the capstone ends. M06 comes before modules so that module interfaces can rely on it, and modules come before refactoring so that extracting code into a module is something M08 can then refactor. Folder names are descriptive; the briefs refer to each other by stage ID (M01–M09).
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+## The capstone — a zero-downtime online shop
 
-***
+The capstone follows M09. It is a standalone project that assumes everything the stages teach and does not change them. You design and build a three-tier online shop on AWS (`ap-southeast-1`), release three versions of it to live traffic with zero failed checkouts, roll a bad release back with one change, keep an off-site copy of its inventory in GCP and serve its theme and images from Azure — with no stored key anywhere and inside a cost challenge.
 
-# Editing this README
+**What is fixed:** the three tiers (web, app and a private database), the blue/green release, the GCP backup and the Azure theme and images, the release stages 0 to 6 and what each must show, and two stacks called `foundation` and `release`. **What is yours:** what the shop sells, what each tier runs on (servers, Fargate or something else), how many resources you use, your network and access, how you achieve zero downtime, how a bad release is detected and rolled back, and how you demonstrate the release. The brief lists all of these in one section, "Your design decisions".
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+| | |
+| --- | --- |
+| Brief | [modules/m10-capstone/brief.md](modules/m10-capstone/brief.md) |
+| Checklist | [modules/m10-capstone/tasks.md](modules/m10-capstone/tasks.md) |
+| Write-up template | [modules/m10-capstone/write-up-template.md](modules/m10-capstone/write-up-template.md) |
+| Constraints | Releases are Terraform only: one change per stage, saved as a plan, no `-target`. No stored keys and no SSH. Two stacks with separate `dev` and `prod` state, and the naming and tags the brief sets |
+| Cost challenge | At most $0.30 an hour while running and under $5 in total, with limits on compute and database size, one NAT gateway and two load balancers. Your own estimate is the evidence |
+| Proofs | Failure proofs, identity and backup proofs, stock checks, a Demo Challenge of five day-2 tasks, and a supplied `check.sh` |
+| AI tools | Any AI tool is fine. You keep a log, never paste credentials, and must be able to explain and change your work without it |
+| Presentation | 15 minutes of presenting and 15 minutes of questions. The panel picks places in your code or evidence at random and asks you to explain them and make a small change live, without AI |
+| You hand in | Your GitLab repository (two stacks, modules, environments and stage inputs), an `evidence/` folder and `write-up.md` |
+| Assessed by | A 100-point rubric. The pass mark is 70, and the definition of done must also be met |
 
-## Suggestions for a good README
+| Rubric criterion | Points | What it covers |
+| --- | --- | --- |
+| Architecture Design (Security, cost, teardown) | 40 | Your design decisions with the alternatives you rejected, a private database and no stored keys, your cost estimate inside the cost challenge, and a clean teardown in all three clouds |
+| Terraform Art | 40 | Both stacks applying cleanly, well-built modules and validation, stages 0 to 6 released with zero failed requests and a one-change rollback, and the Demo Challenge tasks |
+| Presentation | 20 | A 15-minute walkthrough from your evidence, and explaining and changing your own code live, without AI |
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+Each criterion is scored from 0 to its points: Excellent is 80% or more of them, Satisfactory 50% to 79%, and Needs work under 50%. The presentation is the third criterion. It is also where the panel confirms the evidence behind the other two, and a claim you cannot explain can lose the points it supports. Your trainer gives you a `data/` folder (the application in three versions, a starter catalogue, a starter theme and images, an optional `probe.sh` and `check.sh`); you may replace the catalogue and theme with your own.
 
-## Name
-Choose a self-explaining name for your project.
+## Rules for every stage
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+These apply to every stage brief, M01 to M09. A brief repeats only what is specific to its stage. The capstone restates its own rules in its brief.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+- **Terraform CLI, 1.11 or later**, at the exact version in `versions.env`. You build with the Terraform CLI; OpenTofu appears only as an optional, ungraded sidebar in M01 — a short note on where behaviour differs (ADR-002). It is not part of any deliverable or definition of done.
+- **AWS first.** GCP and Azure appear only in M09, as setup and read-only checks.
+- **Sandbox accounts only, short-lived sign-in only.** Never create, store or commit a static access key, service-account key or client secret.
+- **Destroy at the end of every stage.** The M02 state bucket is the only thing kept, until the capstone ends. Keep resources small and cheap, and use no NAT gateways.
+- **Know what it costs before you apply.** Each brief's stack constraints say what the stage may bill. Look up what each resource in your plan bills and estimate the hourly cost before you apply. Billing APIs are not used, so your estimate is your evidence.
+- **Sandbox-compatible tooling only.** No Organizations or service control policies, billing APIs, tag-filtered budgets, paid SaaS or policy-as-code engines. No HCP Terraform, Stacks, Packer, Kubernetes providers or `terraform test`.
+- **Pin everything and commit the lock file.** Formatting and validation checks must pass before you call a stage done.
+- **Never edit state by hand.** Refactor declaratively.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+## What review looks for
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+Your trainer reviews what you built and what you wrote together, against one rubric. The capstone has its own rubric.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+| Criterion | Graded on | Points | Excellent | Satisfactory | Needs work |
+| --- | --- | --- | --- | --- | --- |
+| Deliverable and definition of done | Build and write-up | 25 | Everything the brief names is there and works as described, and a reviewer can run it from a clean start and get what your write-up says. Every definition-of-done item is met and shown in the write-up with real evidence — pasted output or a screenshot, trimmed to the relevant lines and redacted | The deliverable is mostly there, or it works only after a fix you made during review. Every item is addressed, but some evidence is a claim or is hard to follow | Parts of the deliverable are missing, or it does not run. An item is unmet, or has no evidence |
+| Configuration quality, security and cost | Build | 20 | Clear and well organised, so someone reading it for the first time can follow it. It follows the brief's constraints, formatting and validation pass, versions are pinned and the lock file is committed. There are no static credentials and no state in version control, and everything the brief says to destroy is gone, confirmed from the cloud side. You looked up what each resource bills before you applied, and your estimate is in the write-up | It works but is untidy, or has one slip against the constraints or the security and clean-up rules, which you caught and fixed. Or the cost estimate was made after applying | It is hard to follow, breaks a constraint, or hard-codes what the brief says to keep out of the code. Or there is a stored key, a committed state file or a resource left running, or the cost was never considered |
+| Design decisions | Write-up | 15 | Every research prompt in the brief has a reasoned answer that says what you considered, what you chose and what you gave up, and the answers match what you built | Questions are answered, but the reasons are thin or the trade-off is missing | A question is unanswered, or an answer only restates what you built |
+| How to build it | Write-up | 20 | Someone else could follow it from a clean start and end up with your build; you have followed it yourself and it works | It mostly works, with gaps or steps that assume knowledge the reader may not have | It is a summary of what you did rather than a guide, or it was never followed through |
+| Concepts, obstacles and AI log | Write-up | 10 | Two or three concepts in your own words, each with an example from your own build. "What tripped me up" lists real obstacles with the exact error text, the cause and the fix; these entries become the course's common-errors list. The AI log is specific: which tools, concrete examples, a suggestion that was wrong and how you caught it, and what you wrote yourself — or one line saying none was used | Concepts are correct but generic or close to the documentation's wording, or the obstacles are listed without the error text or the cause, or the AI log is generic or has no corrected suggestion | A section is missing or wrong, the obstacles are only polished successes, or there is no AI log |
+| Understanding | Build and write-up | 10 | You explain any part of your build and your write-up when the trainer asks, without re-reading it | You explain most of it and need prompting on the rest | You cannot explain work you submitted |
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### How a stage is graded
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+1. Your trainer runs your build from a clean start and reads your write-up.
+2. Each criterion is scored from 0 to its points. Excellent is 80% or more of the points, Satisfactory is 50% to 79%, and Needs work is under 50%.
+3. The scores are added up to a total out of 100.
+4. The stage is **accepted** when the total is 70 or more and both of these are true: the deliverable works and every item in the definition of done is met and evidenced; and there is no stored credential, no committed state file and nothing left running that the brief says to destroy.
+5. Otherwise the stage goes back to you with the criteria to fix, and you revise it before starting the next one.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+A stage that scores 90 or more is a candidate for the content library.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+The capstone's build and write-up are marked against the capstone's own rubric, which has its own points and a pass mark of 70 out of 100, and confirmed in its presentation.
