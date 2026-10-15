@@ -1,13 +1,13 @@
 # 2026-10-14 — Handing `modules/` to the DevOps Mentor
 
-First end-to-end run of the Curriculum Architect → DevOps Mentor handover for one stage, using the Build-to-Teach cycle (`docs/build-to-teach-framework/build-to-teach-framework.md`) and the EPAV agents in `.opencode/agents/`. M01 was the pilot; the same cycle has since produced M02 and M03. Findings worth keeping for the next stage and the next course.
+First end-to-end run of the Curriculum Architect → DevOps Mentor handover for one stage, using the Build-to-Teach cycle (`docs/build-to-teach-framework/build-to-teach-framework.md`) and the EPAV agents. M01 was the pilot; the same cycle has since produced M02 and M03. Findings worth keeping for the next stage and the next course.
 
 ## Handover shape that worked
 
-- **One brace of artifacts per stage, both trainer-side.** A handover doc (`docs/handovers/m01-getting-started-with-terraform-handover.md`) and the mentor's coaching package (`docs/handovers/m01-devops-mentor-coaching-package.md`). Neither goes under `modules/`: that tree stays trainee-clean, per the playbook's trainee-view rule (`docs/templates/build-to-teach-playbook.md:33`).
+- **One brace of artifacts per stage, both trainer-side.** A handover doc and the mentor's coaching package. Neither goes under `modules/`: that tree stays trainee-clean, per the playbook's trainee-view rule (`docs/templates/build-to-teach-playbook.md:33`).
 - **The handover carries requirements, not answers.** Competency, deliverable, DoD-01…07, constraints, dependencies, risks and the acceptance gate — the stage brief restated for the mentor, with nothing added.
 - **Sensitive items are listed, never resolved.** The five scope research prompts (`brief.md:13-17`) are named as sensitive so the mentor's hints stay process-level (where to look, what to compare, what to record) and never the conclusion. The same leak rule that governs `tasks.md` (`docs/templates/trainee-task-planner.md:44-56`) applies to coaching.
-- **The mentor does not self-approve.** It stops short of "complete" and hands the build + write-up + evidence to the Technical Reviewer (`.opencode/agents/devops-mentor.md:105-106`).
+- **The mentor does not self-approve.** It stops short of "complete" and hands the build + write-up + evidence to the Technical Reviewer.
 
 ## Findings
 
