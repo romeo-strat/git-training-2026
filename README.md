@@ -4,12 +4,15 @@ This is your Terraform course: nine training stages in `modules/`, followed by a
 
 A note on words: a **module** in this repository is a *training stage*, not a Terraform module. Stage [M07](modules/m07-designing-reusable-terraform-modules/brief.md) is the one that teaches Terraform modules.
 
+There is also an interactive HTML version of the stages: open `site/index.html` in a browser for self-guided tours, checklists, self-checks and search. See `site/README.md` to regenerate it.
+
 ## What is in this repository
 
 | Path | What it holds |
 | --- | --- |
 | `modules/` | The nine stage folders (M01–M09), each with a brief, a checklist and a write-up template |
 | `modules/m10-capstone/` | The capstone, with its own brief, checklist and write-up template |
+| `site/` | The interactive HTML version of stages M01–M09 (generated; open `site/index.html`) |
 
 The other folders are trainer material. You do not need them to do the stages.
 
