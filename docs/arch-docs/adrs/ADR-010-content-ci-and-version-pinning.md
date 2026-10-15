@@ -11,7 +11,7 @@ Providers release frequently and a broken activity in a self-paced course has no
 
 ## Decision
 
-1. **One source of truth** for versions: `versions.env` holds the exact pinned Terraform version and provider versions; activity `required_providers` constraints are derived from them. The dev container, activity starters, solutions and CI all read from it.
+1. **One source of truth** for versions: `versions.env` (Terraform version and provider constraints). The dev container, activity starters, solutions and CI all read from it.
 2. **Per-merge-request CI** (GitLab merge request pipelines), for every activity:
    - `fmt`, `validate` on starter and solution
    - the check script passes on the solution and fails with the expected items on the starter
