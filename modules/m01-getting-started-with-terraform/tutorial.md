@@ -29,8 +29,8 @@ You'll see **Example** boxes often. They show you the **shape** of things — a 
 
 Keep two things at hand the whole way:
 
-- **Your brief** (`brief.md`) — the objective, the scope, the constraints, the deliverable and the definition of done. This tour follows the lab in that brief.
-- **Your write-up** (`write-up.md`) — your copy of `write-up-template.md`. Fill it in **as you go**, not at the end. When you fill in the "How to build it" section, write it for someone who will follow it with no trainer to ask.
+- **Your brief** ([brief.md](../../modules/m01-getting-started-with-terraform/brief.md)) — the objective, the scope, the constraints, the deliverable and the definition of done. This tour follows the lab in that brief.
+- **Your write-up** (`write-up.md`) — your copy of [write-up-template.md](../../modules/m01-getting-started-with-terraform/write-up-template.md). Fill it in **as you go**, not at the end. When you fill in the "How to build it" section, write it for someone who will follow it with no trainer to ask.
 
 > **Where does my code live?** Not in this repository. Build in a folder of your own, and keep your Terraform code in your own GitLab repository. Link that repository from the header of your write-up.
 
@@ -52,6 +52,8 @@ By the end of this tour you'll have:
 
 **Goal:** a machine that can talk to AWS safely, with Terraform at the pinned version.
 
+*First-run estimate: about 30–40 minutes (installs and sign-in; yours will vary).*
+
 The environment comes first. If you get this wrong, every later error is confusing. Take your time here.
 
 ### 1a. Install the tools
@@ -63,6 +65,15 @@ You need Terraform, the AWS CLI, Git, `jq`, and an editor. Your brief asks you t
 - Install a version manager for Terraform (`tfenv` or `asdf`).
 - Install the AWS CLI, Git and `jq`.
 - Install Visual Studio Code and the **HashiCorp Terraform** extension.
+
+One path, written out so you are never stuck on the commands (shown for macOS in a POSIX shell; on Windows the version managers need Git Bash or WSL — the commands below were written down, not run on every platform here). *Which* install method fits each tool on each OS, and what each costs you in maintenance, is still your research prompt — this is just one way through:
+
+```
+brew install tfenv
+brew install awscli git jq
+tfenv install <TF_VERSION from versions.env>
+tfenv use <TF_VERSION from versions.env>
+```
 
 **Checkpoint**
 
@@ -103,7 +114,13 @@ The version numbers are made up on purpose — yours must match `versions.env`. 
 
 **Try it**
 
-- Sign in to AWS through **IAM Identity Center** using the AWS CLI, following your trainer's sandbox instructions.
+- Sign in to AWS through **IAM Identity Center** using the AWS CLI, following your trainer's sandbox instructions. The two commands that drive it:
+
+```
+aws configure sso    # once per machine: start URL, region, account and role come from your sandbox invitation
+aws sso login        # run at the start of every session
+```
+
 - Prove the connection:
 
 ```
@@ -135,13 +152,15 @@ Notice it's a **role** (`assumed-role`), not an IAM **user** — think about wha
 - **How does describing the state you want differ from scripting the steps to get there?**
 - **Run a scan for static access keys** across your disk and your repository. Record the command you used and **what the scan looked for and what it can miss.**
 
-> **Watch out.** The course forbids stored keys of every kind (`README.md` → "Rules for every stage"). If you're ever tempted to make an access key "so it just works," stop and ask your trainer instead. That temptation is exactly the habit this stage exists to prevent.
+> **Watch out.** The course forbids stored keys of every kind ([README.md](../../README.md#rules-for-every-stage) → "Rules for every stage"). If you're ever tempted to make an access key "so it just works," stop and ask your trainer instead. That temptation is exactly the habit this stage exists to prevent.
 
 ---
 
 ## Part 2 — Dependencies: the `versions.tf` file
 
 **Goal:** declare what Terraform needs, and see it fetch those things on `init`.
+
+*First-run estimate: about 10 minutes.*
 
 Terraform organises itself into small files, each with one job. This part creates the first one: the file that says **which providers** the configuration needs.
 
@@ -228,6 +247,8 @@ The real output also prints a short paragraph explaining the lock file. Read tha
 
 **Goal:** tell Terraform *how* to talk to AWS, and set tags in one place.
 
+*First-run estimate: about 10 minutes.*
+
 **Try it**
 
 1. Create `providers.tf` with the AWS provider block.
@@ -291,6 +312,8 @@ Success! The configuration is valid.
 
 **Goal:** create one resource and *read the plan before you ever apply*.
 
+*First-run estimate: about 15 minutes.*
+
 **Try it**
 
 1. Create `main.tf` with a single resource: an `aws_ssm_parameter` (your brief names it).
@@ -345,7 +368,7 @@ Read every line rather than skimming. Which lines are values *you* supplied, and
 - **How can you tell, from the plan alone, what a change will do?**
 - **What would you do if a plan showed a destroy you did not expect?**
 
-**Start your plan-review note here.** Your brief asks for a written **plan-review note** (`TASK-M01-B07`). Make it a habit, not a one-off: for every plan you produce in this stage, classify every change the plan shows as **create**, **in-place update** or **replacement**, and write down *how you knew*. Your trainer will go through each classification with you at review.
+**Start your plan-review note here.** Your brief asks for a written **plan-review note** ([TASK-M01-B07](../../modules/m01-getting-started-with-terraform/tasks.md#build)). Make it a habit, not a one-off: for every plan you produce in this stage, classify every change the plan shows as **create**, **in-place update** or **replacement**, and write down *how you knew*. Your trainer will go through each classification with you at review.
 
 **Example — the format of a plan-review note**
 
@@ -366,6 +389,8 @@ The table is the *format*; the "How I knew" column is the substance, and it's yo
 ## Part 5 — Apply, update, destroy
 
 **Goal:** run the full lifecycle and prove, from the cloud side, that it's gone.
+
+*First-run estimate: about 15 minutes.*
 
 **Try it**
 
@@ -389,6 +414,8 @@ terraform plan
 ```
 terraform destroy
 ```
+
+> **Watch out.** Your first `apply` writes `terraform.tfstate` (and a `.backup` file) into your build folder. In this stage, state is local and **never committed**. The `.gitignore` that enforces this arrives in Part 6b — until then, run `git status` before every commit and make sure no `.tfstate` file is staged. If one already is, unstage it now.
 
 **Example — `apply` and `destroy` tell you the tally**
 
@@ -426,6 +453,8 @@ Note the summary line at the end of each — *added / changed / destroyed*. Afte
 ## Part 6 — Wrap up
 
 **Goal:** land the landing. Prove it's all done, clean up, then write it up.
+
+*First-run estimate: about 20 minutes (evidence, clean-up and write-up).*
 
 ### 6a. Self-check against your definition of done
 
