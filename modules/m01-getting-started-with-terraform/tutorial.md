@@ -66,7 +66,9 @@ You need Terraform, the AWS CLI, Git, `jq`, and an editor. Your brief asks you t
 - Install the AWS CLI, Git and `jq`.
 - Install Visual Studio Code and the **HashiCorp Terraform** extension.
 
-One path, written out so you are never stuck on the commands (shown for macOS in a POSIX shell; on Windows the version managers need Git Bash or WSL — the commands below were written down, not run on every platform here). *Which* install method fits each tool on each OS, and what each costs you in maintenance, is still your research prompt — this is just one way through:
+Two paths, written out so you are never stuck on the commands — pick the one for your operating system (both were written down, not run on every platform here). *Which* install method fits each tool on each OS, and what each costs you in maintenance, is still your research prompt — these are just ways through.
+
+**macOS** (in a POSIX shell):
 
 ```
 brew install tfenv
@@ -74,6 +76,26 @@ brew install awscli git jq
 tfenv install <TF_VERSION from versions.env>
 tfenv use <TF_VERSION from versions.env>
 ```
+
+**Linux** — packages first (Debian/Ubuntu shown; adjust to your distro's package manager):
+
+```
+sudo apt update
+sudo apt install -y git jq
+```
+
+Install the AWS CLI through your distro's package (or the official installer from the AWS docs), and VS Code from the `.deb`/`.rpm` on code.visualstudio.com (or `sudo snap install code --classic`).
+
+Then the version manager, in your shell:
+
+```
+git clone https://github.com/tfutils/tfenv.git ~/.tfenv
+export PATH="$HOME/.tfenv/bin:$PATH"
+tfenv install <TF_VERSION from versions.env>
+tfenv use <TF_VERSION from versions.env>
+```
+
+On any of these systems, install the **HashiCorp Terraform** extension from inside VS Code (Extensions view → "HashiCorp Terraform").
 
 **Checkpoint**
 
@@ -104,7 +126,7 @@ The version numbers are made up on purpose — yours must match `versions.env`. 
 
 **Your turn**
 
-- **Which install method fits each tool on each operating system, and what does each choice cost you in maintenance?** (Write your answer for a learner on macOS *and* one on Windows.)
+- **Which install method fits each tool on each operating system, and what does each choice cost you in maintenance?** (Write your answer for a learner on macOS *and* one on Linux.)
 - **What fails differently on Windows than on macOS?**
 - **How does a version manager keep Terraform at the version you pinned?**
 
@@ -120,6 +142,8 @@ The version numbers are made up on purpose — yours must match `versions.env`. 
 aws configure sso    # once per machine: start URL, region, account and role come from your sandbox invitation
 aws sso login        # run at the start of every session
 ```
+
+The same two commands work in any shell — bash on Linux, zsh on macOS — the AWS CLI does not care which operating system you are on.
 
 - Prove the connection:
 
