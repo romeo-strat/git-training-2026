@@ -9,8 +9,10 @@ Do **not** hand-edit these. They are produced from the markdown sources at the r
 | File | Source |
 | --- | --- |
 | `index.html` | `README.md` |
-| `m01.html` … `m09.html` | `modules/<stage>/tutorial.md` (Tour tab) and `modules/<stage>/tasks.md` (Checklist tab) |
+| `m01.html` … `m09.html` | `modules/<stage>/tutorial.md` (Tour tab), `modules/<stage>/tasks.md` (Checklist tab), `modules/<stage>/brief.md` (Brief tab) and `modules/<stage>/write-up-template.md` (Write-up tab) |
 | `assets/js/search-index.js` | commands, parts and prompts collected from the tutorials; task totals from `tasks.md` |
+
+The filled `modules/<stage>/write-up.md` is never rendered — the build reads `write-up-template.md` only, so research-prompt answers never reach the site. Stage tabs are deep-linkable via the URL hash (`m01.html#brief`, `m01.html#writeup`, `m01.html#checklist`, …); the whitelist lives in `assets/js/site.js` (`initHash`).
 
 Hand-authored and safe to edit:
 
@@ -33,7 +35,7 @@ node tools/check-site.mjs
 
 ## Features
 
-- **Tour / Checklist / Self-check / Commands** tabs per stage.
+- **Tour / Checklist / Self-check / Commands / Brief / Write-up** tabs per stage.
 - **Progress** — tick tasks and parts; stored per browser, shown in the ring and sidebar.
 - **Your turn answers** — every research prompt has an autosaved box, exportable as markdown per stage (“Download my answers”).
 - **Self-check** — rate each prompt *Can explain* / *Revisit*; answers are never supplied.

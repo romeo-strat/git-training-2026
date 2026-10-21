@@ -6,4 +6,4 @@ graphify-out/
 ./.opencode/node_modules/*
 ./.opencode/plugins/*
 ./opencode/package*
-
+.opencode/

@@ -281,7 +281,7 @@
 
   function initHash() {
     var h = (window.location.hash || '').replace('#', '');
-    if (['tour', 'checklist', 'selfcheck', 'commands'].indexOf(h) > -1) switchTab(h);
+    if (['tour', 'checklist', 'selfcheck', 'commands', 'brief', 'writeup'].indexOf(h) > -1) switchTab(h);
   }
 
   function warnNoStorage() {

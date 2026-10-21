@@ -31,6 +31,10 @@ for (const folder of stages) {
   check(!html.includes('**'), id + ': leftover ** markup');
   check(!html.includes('```'), id + ': leftover code fence');
   check(!html.includes(']>('), id + ': leftover link markup');
+  check(html.includes('data-panel="brief"'), id + ': missing brief panel');
+  check(html.includes('data-panel="writeup"'), id + ': missing write-up panel');
+  check(html.includes('id="brief"'), id + ': missing brief anchor');
+  check(html.includes('id="writeup"'), id + ': missing write-up anchor');
 
   const turnMarkers = (tutorial.match(/^\*\*Your turn\*\*$/gm) || []).length;
   const turnBoxes = (html.match(/box--turn/g) || []).length;

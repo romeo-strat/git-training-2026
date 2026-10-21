@@ -356,6 +356,8 @@ function readStages() {
         blurb: doc.subtitle,
         tutorialRaw,
         tasksRaw: readFileSync(join(MODULES, folder, 'tasks.md'), 'utf8'),
+        briefRaw: readFileSync(join(MODULES, folder, 'brief.md'), 'utf8'),
+        templateRaw: readFileSync(join(MODULES, folder, 'write-up-template.md'), 'utf8'),
       };
     });
 }
@@ -414,12 +416,31 @@ function doRewrite() {
     const m = /modules\/(m\d+)[^/]*\/([a-z-]+)\.md(#.*)?$/.exec(href);
     if (m) {
       if (m[1] === 'm10') return 'index.html#capstone';
+      if (m[2] === 'brief') return m[1] + '.html#brief';
+      if (m[2] === 'write-up-template') return m[1] + '.html#writeup';
+      if (m[2] === 'tasks') return m[1] + '.html#checklist';
       return m[1] + '.html' + (m[3] || '');
     }
     const rm = /(?:\.\.\/)*README\.md(#.*)?$/.exec(href);
     if (rm) return 'index.html' + (rm[1] || '');
     return href;
   };
+}
+
+function renderDocPanel(raw, partPrefix, slugSet) {
+  const doc = splitDoc(parseDoc(raw.replace(/<!--[\s\S]*?-->/g, '')));
+  let h = '';
+  for (const sec of doc.sections) {
+    if (sec.title === '') {
+      const ctx = { partId: partPrefix, slugSet, prompts: [], commands: [], turnCount: 0 };
+      h += renderSectionBody(sec.blocks, ctx);
+    } else {
+      const id = slug(sec.title, slugSet);
+      const ctx = { partId: partPrefix + '-' + id, slugSet, prompts: [], commands: [], turnCount: 0 };
+      h += '<section class="sec" id="' + id + '"><h2>' + inline(sec.title) + '</h2>' + renderSectionBody(sec.blocks, ctx) + '</section>\n';
+    }
+  }
+  return h;
 }
 
 function buildStage(stage, stages) {
@@ -488,6 +509,12 @@ function buildStage(stage, stages) {
   for (const c of uniqCmd) cmdHtml += '<tr data-cmd="' + escAttr(c.cmd.toLowerCase()) + '"><td><code>' + esc(c.cmd) + '</code></td><td class="muted">' + inline(c.part) + '</td></tr>';
   cmdHtml += '</tbody></table></div></section>';
 
+  const briefHtml = '<section class="sec" id="brief"><h2>Brief</h2>' +
+    renderDocPanel(stage.briefRaw, stage.id + '-brief', slugSet) + '</section>';
+  const writeupCallout = '<aside class="callout callout--note"><p>Copy <code>write-up.md</code> from this stage\'s folder in the repo and fill it in as you build; leave the template untouched. The course site never renders a filled write-up — answers stay in your repository.</p></aside>';
+  const writeupHtml = '<section class="sec" id="writeup"><h2>Write-up</h2>' + writeupCallout +
+    renderDocPanel(stage.templateRaw, stage.id + '-writeup', slugSet) + '</section>';
+
   const idx = stages.findIndex((s) => s.id === stage.id);
   const prev = idx > 0 ? stages[idx - 1] : null;
   const next = idx < stages.length - 1 ? stages[idx + 1] : null;
@@ -498,11 +525,13 @@ function buildStage(stage, stages) {
     '<main class="content">' +
     '<div class="stagehead"><p class="stagehead__id">' + stage.id.toUpperCase() + '</p><h1>' + inline(stage.title) + '</h1><p class="stagehead__sub">' + inline(doc.subtitle) + '</p>' +
     '<div class="export"><button class="btn" id="export" type="button">Download my answers</button></div></div>' +
-    '<div class="tabs" role="tablist"><button class="tab is-active" data-tab="tour" role="tab">Tour</button><button class="tab" data-tab="checklist" role="tab">Checklist</button><button class="tab" data-tab="selfcheck" role="tab">Self-check</button><button class="tab" data-tab="commands" role="tab">Commands</button></div>' +
+    '<div class="tabs" role="tablist"><button class="tab is-active" data-tab="tour" role="tab">Tour</button><button class="tab" data-tab="checklist" role="tab">Checklist</button><button class="tab" data-tab="selfcheck" role="tab">Self-check</button><button class="tab" data-tab="commands" role="tab">Commands</button><button class="tab" data-tab="brief" role="tab">Brief</button><button class="tab" data-tab="writeup" role="tab">Write-up</button></div>' +
     '<div class="panel is-active" data-panel="tour">' + tourHtml + '</div>' +
     '<div class="panel" data-panel="checklist">' + checkHtml + '</div>' +
     '<div class="panel" data-panel="selfcheck">' + selfHtml + '</div>' +
     '<div class="panel" data-panel="commands">' + cmdHtml + '</div>' +
+    '<div class="panel" data-panel="brief">' + briefHtml + '</div>' +
+    '<div class="panel" data-panel="writeup">' + writeupHtml + '</div>' +
     '</main></div>\n' + foot(prev, next) + scripts(stage.id) + '</body>\n</html>\n';
 
   return {
