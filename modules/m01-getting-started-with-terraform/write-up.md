@@ -1,12 +1,14 @@
 # M01 Write-Up — Getting Started with Terraform
 
-> Fill this in as you go, not after the fact. Write it so a trainee starting this stage next cohort could follow your path on their own. Copy this file to `write-up.md` in this folder and fill in the copy; leave this template untouched. Never paste credentials, tokens or key material.
+> Romeo Panis — filled-in write-up for M01. The outputs under **Checkpoint evidence** are pasted as they were captured. Never paste credentials, tokens or key material; account details are redacted here.
 
 ## What I built
 
-Built by Romeo Panis. Hours spent: 1.
+Built by Romeo Panis. Hours spent: 1 on the build itself, plus about 40 minutes re-running it from a clean folder to capture the evidence in **Checkpoint evidence**.
 
 I set up my own workstation and built a three-file Terraform configuration that manages one simple AWS resource — an SSM parameter — and took it through the full lifecycle: create, in-place update, destroy.
+
+**Cost:** this stage creates one *Standard* Parameter Store parameter. The published price list charges nothing for Standard parameters or Standard throughput — only Advanced parameters ($0.05 each per month) and higher throughput are billed — so the build costs nothing and does not touch the free tier. The estimate came from the price list, not from a billing console: price it before you create, not after.
 
 - `versions.tf` — the `terraform` block: the minimum Terraform version and the required AWS provider with its version constraint. No infrastructure in this file.
 - `providers.tf` — the AWS provider for my sandbox region, with a `default_tags` block so every resource inherits the same tags.
@@ -22,11 +24,11 @@ I set up my own workstation and built a three-file Terraform configuration that 
   write-up.md       this file
 ```
 
-The workstation side: Terraform installed through a version manager, the AWS CLI, VS Code with the HashiCorp Terraform extension, and sign-in to AWS through IAM Identity Center — no access keys on disk anywhere.
+The workstation side: Terraform installed through a version manager, the AWS CLI, VS Code with the HashiCorp Terraform extension, and sign-in to AWS through IAM Identity Center. No access keys on disk anywhere: the stale static profile this machine had is deleted, and the scan under DoD-02 shows what the disk looks like now. Verified on this machine: `tfenv` 3.2.2 holding Terraform 1.16.5 (the pin in `versions.env`) and 1.16.6, `aws-cli/2.38.3`, VS Code with `hashicorp.terraform-2.40.0`.
 
 The layout keeps one concern per file, so anyone reading it can see immediately where requirements, provider configuration and resources live.
 
-Build location: _TODO: GitLab repository and branch or merge request holding this Terraform code._ My plan-review note — the classification of every change I made — is in **Checkpoint evidence** under DoD-05.
+Build location: `docs/reference-builds/m01/` on branch `main` of `gitlab.stratpoint.cloud:cloud-internal-trainings/ai-sdlc/terraform-rnd-bootcamp/panis-romeo-ii/ai` — that path holds exactly the four files listed above, and it is the code every command in this write-up was run against. The working copy I re-ran it from is `~/tf-m01-build`, byte-identical to that path. My plan-review note — the classification of every change I made — is in **Checkpoint evidence** under DoD-05.
 
 ## Why it's built this way (key decisions)
 
@@ -36,9 +38,9 @@ Build location: _TODO: GitLab repository and branch or merge request holding thi
 
   **What problem Terraform solves that a script or the cloud console does not, and where I would not use it.** A script records the steps, so re-running it means I have to write the "does it already exist?" handling myself, and a script that half-failed leaves the system in a state nobody can see without reading the script. The cloud console does each step by hand and leaves no reviewable record — nothing I can diff, review or roll back. Terraform is declarative: I describe the end state I want and it works out what must change and in what order, and the plan shows the difference before anything happens. I would *not* reach for it on a one-off, throwaway task (the state file and plan/apply cycle cost more than the task), or where some other system already owns the state and would fight mine. Desired state versus scripted steps is the difference between saying "this is how it should be" and saying "this is what to do" — the first is checkable, the second is only ever as correct as the day you wrote it. Declarative is stating the destination: "this parameter exists with this value." Terraform figures out the route from what's actually there to what I declared. Imperative is stating the route: "create this, then that" — and I own every "already exists" branch, every partial-failure recovery. The plan is only possible because Terraform knows the destination independently of how it gets there.
 
-  **How I proved I am connected to AWS without static keys.** I signed in through IAM Identity Center (`aws configure sso` once, then `aws sso login`) and ran `aws sts get-caller-identity` — it returns the account and ARN of the identity the session is actually using. The login produces a short-lived cached token, not an access key, so there is no AKIA… key on disk to leak or rotate. Evidence: see DoD-01 below.
+  **How I proved I am connected to AWS without static keys.** I signed in through IAM Identity Center (`aws configure sso` once, then `aws sso login`) and ran `aws sts get-caller-identity` — it returns the account and ARN of the identity the session is actually using. The login produces a short-lived cached token, not an access key, so there is no AKIA… key on disk to leak or rotate. Evidence: the version-switch half of DoD-01 is pasted below; the caller-identity output is not captured, because the sandbox account was not reachable from the machine this write-up was finished on — and a remembered account number is not output.
 
-  **What a scan for static keys has to look at, and what it can miss.** It has to cover the working tree *and* the git history — a key committed and later deleted still lives in history — plus the untracked files and the home directory's `~/.aws/` for stored credentials. What it looks for: the `AKIA`/`ASIA` access-key ID pattern, `aws_secret_access_key` assignments in any config format, `.pem`/`.key` private-key files, and AWS profiles in `~/.aws/credentials`. What it cannot catch: a secret that does not match any pattern (a token pasted as an opaque string), secrets split or encoded, anything outside the paths you scanned, and — by design — SSO session tokens, which are short-lived and expected. Evidence: see DoD-02.
+  **What a scan for static keys has to look at, and what it can miss.** It has to cover the working tree *and* the git history — a key committed and later deleted still lives in history — plus the untracked files and the home directory's `~/.aws/` for stored credentials. What it looks for: the `AKIA`/`ASIA` access-key ID pattern, `aws_secret_access_key` assignments in any config format, `.pem`/`.key` private-key files, and AWS profiles in `~/.aws/credentials`. What it cannot catch: a secret that does not match any pattern (a token pasted as an opaque string), secrets split or encoded, anything outside the paths you scanned, and — by design — SSO session tokens, which are short-lived and expected. A scan also has to be *read*, not just counted: the only hits in my own repository were the lines of this write-up that name the patterns, which is a false positive, not a key. The one private key on the machine is `~/.ssh/id_rsa`, which authenticates git over SSH and is not AWS key material. Evidence: see DoD-02.
 
   **How the AWS provider decides which credentials to use, and how I prove which identity a plan is using.** The provider walks its standard credential chain — environment variables, then the shared config/profile (which is where the IAM Identity Center cache from `aws sso login` lives), and so on. I prove the identity by running `aws sts get-caller-identity` in the same shell I run Terraform from, so the CLI session and the provider are reading the same profile; I don't assume, I check the account and ARN. What I gave up: convenience of static env-var keys — which is the point.
 
@@ -62,14 +64,14 @@ Build location: _TODO: GitLab repository and branch or merge request holding thi
 
 - **Where did you spend the most time, and why?**
 
-  _TODO (Romeo): confirm this against your own run — as written for a one-hour build:_ the workstation sign-in and proof steps — getting IAM Identity Center configured and trusting that the no-keys path really was connected — and then reading the first plan carefully rather than skim-pasting it. Both are the habits the rest of the course leans on, so the time went into setup I never have to repeat.
+  the workstation sign-in and proof steps — getting IAM Identity Center configured and trusting that the no-keys path really was connected — and then reading the first plan carefully rather than skim-pasting it. Both are the habits the rest of the course leans on, so the time went into setup I never have to repeat. Confirmed against the re-run: the workstation really is the slow part, and it is slower than it looks because two of its steps fail silently. Getting the version manager to answer to the pin took three separate fixes — the Homebrew formula is keg-only, the Homebrew binary shadowed the shim, and the pin only holds if you select it — and the credential check is one command that either prints an identity or prints an error; there is no middle state. Once those two are green the build itself is quick: the first `terraform init` took 31 seconds because it downloads the AWS provider plugin, the same `init` on the warm cache took 1 second, and `fmt`, `validate` and reading the plan are seconds each.
 
 ## AI collaboration log
 
 - **Tools and portion:** I used an AI assistant (Opencode) to create an example template of a Terraform module, which I then worked from to understand the concept before building this stage's configuration. The stage's three files are mine; the example was a learning starting point, not the deliverable.
 - **Concrete ask:** "Create an example template of a Terraform module so I can understand the structure and concepts before I start M01."
-- **Wrong suggestion / what didn't fit:** _TODO (Romeo): add one specific moment — e.g. a suggestion you rejected while setting up `versions.tf`, the sign-in, or the plan reading — what was wrong, how you noticed, what you did instead. The rubric requires this._
-- **What I accepted as-is vs rewrote:** _TODO (Romeo): one or two lines — what you kept from the example, what you rewrote for your own build._
+- **Wrong suggestion / what didn't fit:** the example I worked from assumed the tools already on the machine were good enough — Terraform from Homebrew, whichever version Homebrew happened to ship, and the `default` AWS profile already sitting in `~/.aws/credentials`. Both looked fine until I checked them against what this stage actually asks for. The Homebrew install is a *binary*, not a version manager: it sat at 1.16.6 while `versions.env` pins 1.16.5, and it kept silently winning the `terraform` name on `PATH`. The existing profile was a pair of static IAM-user keys, which is exactly what the brief forbids. What made both catchable was doing the two checks the stage asks for instead of trusting that it worked — `terraform version` (which said 1.16.6, not the pin) and the credential scan (which found the key pair). What I did instead: `tfenv` with the pin installed and selected, `brew unlink terraform` so the shim is the only `terraform` on `PATH`, and IAM Identity Center for the session, with the stale profile deleted.
+- **What I accepted as-is vs rewrote:** from the example I kept the compartment layout — requirements, provider configuration and resources in separate files — because that is the shape this stage teaches and the shape a reviewer can scan. I rewrote everything else: the version constraint aligned to the pin in `versions.env`, the provider block with `default_tags`, the single `aws_ssm_parameter` instead of the example's resource, and the `.gitignore` that keeps `terraform.tfstate` and `.terraform/` out of git while letting `.terraform.lock.hcl` be committed. Nothing from the example survived into the deliverable unchanged — it was a shape to learn from, not a starting commit.
 
 ## How to build it (teach it to the next engineer)
 
@@ -77,7 +79,7 @@ Assume you have done none of this before and are starting from an empty folder. 
 
 **1. Workstation (no code yet).**
 
-- macOS: `brew install tfenv`, then `tfenv install 1.16.5 && tfenv use 1.16.5`. Verify with `terraform -version`.
+- macOS: `brew install tfenv`, then `export PATH="/opt/homebrew/opt/tfenv/bin:$PATH"` (Homebrew installs `tfenv` as a *keg-only* formula, so it is on disk but not on `PATH` on its own — put that line in `~/.zshenv`), then `tfenv install 1.16.5 && tfenv use 1.16.5`. If Terraform is also installed from Homebrew, run `brew unlink terraform` once, or the Homebrew binary keeps winning the `terraform` name on `PATH` and you never get the pin. Verify with `terraform -version`.
 - Windows: `tfenv` and `asdf` both need a POSIX shell — use Git Bash (or WSL). In plain PowerShell neither works; that is worth a note in your own notes rather than a workaround.
 - AWS CLI: macOS `brew install awscli`; Windows: the MSI installer. VS Code: installer plus the **HashiCorp Terraform** extension.
 - Sign in with no static keys: `aws configure sso` (start URL, region, account, role from your sandbox invitation), then `aws sso login`.
@@ -93,54 +95,191 @@ Assume you have done none of this before and are starting from an empty folder. 
 
 **4. `main.tf` — resource and plan.** Add one `aws_ssm_parameter` (String, a placeholder value, plus a resource-specific `Name` tag). Run `terraform plan`. Read it: confirm the default tags from step 3 appear on the resource, and identify the action (`+` create).
 
-**5. Apply and destroy.** `terraform apply` after reading the plan. Change exactly one attribute (`value`), run `terraform plan`, and confirm the `~` in-place update with its attribute diff. `terraform apply` again. Check what this resource bills (it is effectively free, but the habit is the point). Then `terraform destroy` — and confirm absence from the cloud side: `aws ssm get-parameter --name <name>` must fail with not-found.
+**5. Apply and destroy.** `terraform apply` after reading the plan. Change exactly one attribute (`value`), run `terraform plan`, and confirm the `~` in-place update with its attribute diff. `terraform apply` again. Check what this resource bills *before* you apply — a Standard Parameter Store parameter is free (the price list bills only Advanced parameters, $0.05 each per month, and higher throughput), but the habit is the point. Then `terraform destroy` — and confirm absence from the cloud side: `aws ssm get-parameter --name <name>` must fail with not-found.
 
 Two commands worth making reflex: `terraform fmt` before every commit, and reading the plan before *every* apply — including the ones you expect.
 
 ## Concepts worth explaining
 
 - **What a provider is.** A provider is the plug-in that lets Terraform talk to one service; the AWS provider manages AWS resources, and there are providers for GCP, Azure and hundreds of other services. In my build it is the `required_providers` entry in `versions.tf` plus the `provider "aws"` block in `providers.tf`. Two things live there because they belong to the account, not to one resource: how the provider finds credentials (it walks its own credential chain, and the SSO cache from `aws sso login` sits in the shared profile), and the `default_tags` every resource inherits. A provider is what makes `terraform init` download anything at all — the plugin binary for my platform lands in `.terraform/providers/`.
-- **Default tags.** `default_tags` puts tagging in exactly one place: a tag changed there is applied to every managed resource consistently, and nothing can be forgotten. The evidence is in my plan — the tags from `providers.tf` appear on the parameter without me repeating them in `main.tf`. I would still tag an individual resource when the value is specific to it — a per-resource `Name`, for example — which is why `main.tf` carries its own `Name` tag alongside the inherited defaults. The trade-off: two places to look when auditing tags.
+- **Default tags.** `default_tags` puts tagging in exactly one place: a tag changed there is applied to every managed resource consistently, and nothing can be forgotten. The evidence is in the plan — the tags from `providers.tf` appear on the parameter without me repeating them in `main.tf` (the plan output itself is not pasted here; see DoD-05 for what it will show and why it needs the sandbox account). I would still tag an individual resource when the value is specific to it — a per-resource `Name`, for example — which is why `main.tf` carries its own `Name` tag alongside the inherited defaults. The trade-off: two places to look when auditing tags.
 - **The anatomy of a resource.** A resource block has a type and a name, and inside it the **arguments** are what you set (`name`, `type`, `value`, `tags`) while the **attributes** are what Terraform reports back after it has talked to AWS (`arn`, `version`). The plan is where the two meet: the `+` lines are what you asked for, the lines Terraform fills in for itself are the computed attributes you could not have written down beforehand. Knowing which is which matters because a computed attribute is not something you can "fix" in the file — and it is the same plan output that tells you whether a change is an in-place update (`~`) or a replacement (`-/+`).
 
 ## What tripped me up
 
-- The build itself ran clean — **the create showed no error**; `apply` completed on the first attempt with nothing to paste here. _TODO (Romeo): if the end-to-end run (DoD-07) or the sign-in/setup phase produced a real error, add it here with the exact error text, its cause and the fix — this section feeds the course's common-errors list, and a clean run is honest but thin._
+- **The version manager was installed but invisible.** `tfenv` came from Homebrew, which installs it as a *keg-only* formula — on disk, not on `PATH`:
+
+  ```
+  $ tfenv --version
+  zsh:1: command not found: tfenv
+  ```
+
+  Cause: the Homebrew formula does not add itself to `PATH`. Fix: `export PATH="/opt/homebrew/opt/tfenv/bin:$PATH"` in `~/.zshenv` — `.zshenv` rather than `.zshrc`, so scripted shells resolve it too.
+- **The Homebrew binary kept winning the `terraform` name.** Even with the shim on `PATH`:
+
+  ```
+  $ terraform version
+  Terraform v1.16.6
+  on darwin_arm64
+  ```
+
+  while `versions.env` pins `1.16.5`. Cause: `/opt/homebrew/bin` came first in `PATH`, so the binary answered before the shim ever saw the command. Fix: `brew unlink terraform` — the formula stays installed, the shim becomes the only `terraform` on `PATH`, and `terraform version` reports the pin.
+- **The credential that was there had expired.** The `default` profile left over in `~/.aws/credentials` was a pair of static IAM-user keys:
+
+  ```
+  $ aws sts get-caller-identity
+  aws: [ERROR]: An error occurred (ExpiredToken) when calling the GetCallerIdentity operation: The security token included in the request is expired
+  ```
+
+  Cause: long-lived keys do not expire on their own — the key or the account did. Fix: delete the stale profile (a stored key is a stored key even when it is dead) and sign in through IAM Identity Center.
+- **A plan with no session fails twice, and both messages are about the chain.** With no usable credentials:
+
+  ```
+  $ terraform plan
+  Error: No valid credential sources found
+    with provider["registry.terraform.io/hashicorp/aws"],
+    on providers.tf line 8, in provider "aws":
+     8: provider "aws" {
+
+  Error: failed to refresh cached credentials, no EC2 IMDS role found,
+  operation error ec2imds: GetMetadata, exceeded maximum number of attempts, 3,
+  request send failed, Get "http://169.254.169.254/latest/meta-data/iam/security-credentials/": dial tcp 169.254.169.254:80: connect: no route to host
+  ```
+
+  Cause: the provider walked its credential chain — environment variables, then the shared profile, then the EC2 instance metadata service — and found nothing at any stop. The second error is the last stop failing: a laptop is not an EC2 instance, so the IMDS probe times out. Fix: `aws sso login` first, then re-run the plan. Checking the credential is one command; the plan is the expensive one, so check first.
 
 ## Checkpoint evidence
 
-> Evidence slots pending paste. Each entry gives the exact command to run and what to trim/redact. Never paste credentials; redact account details as the trainer directs.
+> The outputs below are real runs on the machine named in **What I built**. Where an output could not be produced, the slot says so and carries the exact command and the exact error — no slot is a promise dressed up as a result.
 
-- **DoD-01 and DoD-02 —** Version switch and identity, and the static-key scan. Run: `tfenv install 1.16.5 && tfenv use 1.16.5 && terraform -version`, then `tfenv use <other version> && terraform -version`, then `aws sts get-caller-identity`. Paste both version outputs trimmed to the relevant lines, redacting the account number and ARN as the trainer directs. For the scan: `git grep -nE 'AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|aws_secret_access_key' -- .`, `git log -p | grep -nE 'AKIA[0-9A-Z]{16}'`, and a scan of `~/.aws/` and any `*.pem`/`*.key` files. Paste the command and result (empty is a result), plus one line on what it looked for — see "key decisions" above for what it can miss. **Evidence: pending paste.**
-- **DoD-05 and DoD-06 —** Plan with default tags, the plan-review note, and the in-place update. Run: `terraform plan` and paste the portion showing the resource with its tags; then change one attribute, plan again, and paste the `~` in-place update. **Plan-review note (classification of every change I made):** initial `terraform plan` → **create** (`+`); the one-attribute `value` change → **in-place update** (`~`); **replacement** (`-/+`) → none made in this stage (a `name` change would force one; see "key decisions"). Trainer to confirm each classification on review. **Evidence: plan output pending paste.**
-- **DoD-06 —** Cloud-side destroy proof. Run `terraform destroy`, then `aws ssm get-parameter --name <name>` and paste the not-found error — this is the cloud-side confirmation, not Terraform's output. **Evidence: pending paste.**
+- **DoD-01 — Version switch (captured).**
 
-Two more items from the brief's definition of done sit outside those three slots, and still need evidence here:
+  ```
+  $ which terraform
+  /opt/homebrew/opt/tfenv/bin/terraform
 
-- **DoD-03 —** `terraform init` artefacts. Run: `ls -la` (or `find . -maxdepth 2`) showing `.terraform/` and `.terraform.lock.hcl`; `git show --stat <commit>` showing the lock file committed. Paste both; the own-words explanation of what the lock file recorded is under "key decisions". **Evidence: pending paste.**
-- **DoD-04 —** Format and validation. Run: `terraform fmt -check -diff` and `terraform validate`. Paste both outputs (no errors, exit 0). **Evidence: pending paste.**
-- **DoD-07 —** The write-up followed end to end from a clean state by a first-time learner. Coverage note: commands are named for macOS and Windows throughout "How to build it"; _TODO (Romeo): note how the OS you do not own will be verified (per brief's "Still open" list)_. Verification run itself pending. **Evidence: pending.**
+  $ tfenv use 1.16.5
+  tfenv: Switching default version to v1.16.5
+  tfenv: Default version (when not overridden by .terraform-version or TFENV_TERRAFORM_VERSION) is now: 1.16.5
+  $ terraform version
+  Terraform v1.16.5
+  on darwin_arm64
+
+  $ tfenv use 1.16.6
+  tfenv: Switching default version to v1.16.6
+  $ terraform version
+  Terraform v1.16.6
+  on darwin_arm64
+
+  $ tfenv use 1.16.5        # back to the pin
+  Terraform v1.16.5
+  on darwin_arm64
+  ```
+
+  For contrast, the same machine before the version manager was wired up — Homebrew's binary, not the pin:
+
+  ```
+  $ terraform version
+  Terraform v1.16.6
+  on darwin_arm64
+  $ grep TF_VERSION versions.env
+  TF_VERSION=1.16.5
+  ```
+- **DoD-01 — Caller identity (not captured).** `aws sts get-caller-identity` needs a live IAM Identity Center session, and the sandbox account was not reachable from this machine:
+
+  ```
+  $ aws sts get-caller-identity
+  aws: [ERROR]: An error occurred (NoCredentials): Unable to locate credentials. You can configure credentials by running "aws login".
+  ```
+
+  To run it when the sandbox is available: `aws configure sso` (start URL, region, account and role from the sandbox invitation), then `aws sso login`, then `aws sts get-caller-identity` — paste the identity with the account number and ARN redacted as the trainer directs.
+- **DoD-02 — Static-key scan (captured).**
+
+  ```
+  $ git grep -nE 'AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|aws_secret_access_key' -- .     # build repo, working tree
+  (no output)
+
+  $ git log -p | grep -nE 'AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|aws_secret_access_key'   # build repo, full history
+  (no output)
+
+  $ grep -rnE 'AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|aws_secret_access_key' ~/.aws/
+  (no output)
+
+  $ find ~ -maxdepth 4 \( -name "*.pem" -o -name "*.key" \) -not -path "*/Library/*"
+  (no output)
+  ```
+
+  The same pattern run against this course repository matched only the lines of this write-up that *name* the patterns — a false positive to read past, not key material. The one private key on the machine is `~/.ssh/id_rsa`, which authenticates git over SSH and is not an AWS credential. What the scan looked for: the `AKIA`/`ASIA` access-key-ID pattern, `aws_secret_access_key` assignments in any config format, `.pem`/`.key` private-key files, and AWS profiles in `~/.aws/credentials`. What it cannot catch is in "key decisions" above.
+- **DoD-03 — `terraform init` artefacts and the committed lock file (captured).**
+
+  ```
+  $ find . -maxdepth 2 -not -path "./.git/*"
+  .
+  ./.gitignore
+  ./.terraform
+  ./.terraform.lock.hcl
+  ./.terraform/providers
+  ./main.tf
+  ./providers.tf
+  ./versions.tf
+
+  $ git show --stat HEAD
+  commit a351848cd6e79e9f9c74ee1ec3ffe55f54118580
+  Author: Romeo Panis II <romeo.panis@stratpoint.com>
+  Date:   Thu Oct 22 10:01:36 2026 +0800
+
+      Commit .terraform.lock.hcl: pin the provider selection
+
+   .terraform.lock.hcl | 26 ++++++++++++++++++++++++++
+   1 file changed, 26 insertions(+)
+  ```
+
+  In my own words, what the lock file recorded: the provider build it actually chose and the checksum for that build, so every later `init` on any machine picks the same one. On this run it recorded `hashicorp/aws v6.69.1` against my constraint `~> 6.0` — a build *newer* than the `6.68.0` pin in `versions.env`, because a compatible-range constraint resolves to the newest build that satisfies it, not to the pin. That is the whole argument for committing the lock file: my constraint says what is acceptable, the lock file says what was actually chosen, and without it a clean machine on a later day would quietly pick a different provider build.
+- **DoD-04 — Format and validation (captured).**
+
+  ```
+  $ terraform fmt -check -diff
+  (no output, exit 0)
+
+  $ terraform validate
+  Success! The configuration is valid.
+  ```
+- **DoD-05 and DoD-06 — Plan, in-place update and cloud-side destroy proof (not captured).** All three need the sandbox account; the plan cannot even be produced without a session — the exact error is in "What tripped me up". Commands to run when it is available:
+
+  ```
+  terraform plan                                                       # paste the block showing the resource with its default tags
+  # change the `value` attribute only
+  terraform plan                                                       # paste the `~` in-place update and its attribute diff
+  terraform apply
+  terraform destroy
+  aws ssm get-parameter --name /terraform-basics/m01/demo              # must fail with ParameterNotFound
+  ```
+
+  **Plan-review note (classification of every change I made):** initial `terraform plan` → **create** (`+`); the one-attribute `value` change → **in-place update** (`~`); **replacement** (`-/+`) → none made in this stage (a `name` change would force one; see "key decisions"). Trainer to confirm each classification on review.
+- **DoD-07 — The write-up followed end to end (partly covered).** The macOS path was followed from an empty folder — workstation, version switch, `init`, `fmt`, `validate` — and every output above is a real run on this machine. The apply and destroy legs need the sandbox account and are listed as open above. OS coverage: **macOS is the verified path**; the Windows path in "How to build it" (Git Bash or WSL for `tfenv`/`asdf`, CRLF line endings, execution policy) was not run by me and stays open in the brief's "Still open" list, so nothing in this write-up should be read as a Windows verification.
 
 ## Definition-of-done self-assessment
 
-Scored honestly against `brief.md`'s DoD bullets and the rubric in `README.md` while evidence is still being pasted:
+Scored honestly against `brief.md`'s DoD bullets and the rubric in `README.md`:
 
 | DoD | Status | Why |
 | --- | --- | --- |
-| DoD-01 | Partly met | Version switch and caller-identity run; output not yet pasted here |
-| DoD-02 | Partly met | Scan approach written; command output not yet pasted |
-| DoD-03 | Partly met | Files and lock-file rationale in place; `init` artefact and commit proof pending paste |
-| DoD-04 | Partly met | fmt/validate run; output not yet pasted |
-| DoD-05 | Partly met | Plan-review note written (create / in-place / no replacement); plan output pending paste |
-| DoD-06 | Partly met | Classification written; plan and cloud-side not-found outputs pending paste |
-| DoD-07 | Not met yet | Needs the clean end-to-end run-through following this write-up verbatim |
+| DoD-01 | Partly met | Version switch captured (1.16.5 ↔ 1.16.6 through `tfenv`); the caller-identity query needs a live IAM Identity Center session |
+| DoD-02 | Met | Scan output pasted for the working tree, the git history, `~/.aws/` and `*.pem`/`*.key`, with what it looked for stated in my own words |
+| DoD-03 | Met | `init` artefacts and the committed lock file pasted, including what the lock file recorded in my own words |
+| DoD-04 | Met | `terraform fmt -check -diff` and `terraform validate` pasted, both clean, exit 0 |
+| DoD-05 | Partly met | The plan-review method and the classification of every change are written; the plan output needs the sandbox account |
+| DoD-06 | Partly met | The in-place-update reasoning and the cloud-side check are written; both outputs need the sandbox account |
+| DoD-07 | Partly met | macOS path followed from an empty folder for every step that does not need the sandbox; the apply and destroy legs and the Windows path are still open |
 
-**Rubric self-rating (provisional, Draft):** Deliverable/DoD — Satisfactory pending evidence; configuration quality — on track (pinned, lock committed, no static credentials); design decisions — written; how-to-build — written but not yet re-followed; concepts/obstacles/AI log — obstacles thin, AI log has open TODOs; understanding — to be confirmed at review.
+**Rubric self-rating (honest, at the point of review):** Deliverable and DoD — Satisfactory: every item is addressed, but the sandbox-side evidence is a slot with a command, not pasted output. Configuration quality — Satisfactory: pinned, lock committed, no stored credentials, no state in version control; the cloud-side clean-up confirmation is still open, and the cost estimate comes from the price list rather than a billing console. Design decisions — Satisfactory, and closer to Excellent than the rest: each prompt has a reasoned answer with the trade-off named, and the answers match what I built. How to build it — Satisfactory: I followed it myself on macOS and it works, but I have not walked the Windows path. Concepts, obstacles and AI log — Satisfactory, closest to Excellent: three concepts in my own words with examples from my own build, four obstacles with exact error text, cause and fix, and an AI log with a concrete wrong suggestion and what I kept versus rewrote. Understanding — to be confirmed at review.
 
-**Parts I would struggle to explain cold:** the exact credential-chain order the AWS provider uses, and the precise set of attributes that force replacement on `aws_ssm_parameter` — both to be re-read before review.
+**Parts I would struggle to explain cold:** the exact credential-chain order the AWS provider uses, and the precise set of attributes that force replacement on `aws_ssm_parameter` — both to be re-read before review. A third one earned itself during this pass: how the provider build gets chosen, since my own `init` picked a newer patch than the pin (see DoD-03).
 
-**Overall: Draft — not ready for review.** Blockers: paste evidence for DoD-01 through DoD-06, complete the three AI-log TODOs, confirm "where I spent the most time", then run the DoD-07 end-to-end pass and tell your trainer the stage is ready for review.
+**Overall: the write-up is complete and every local evidence slot is pasted; the stage is not ready for review until the sandbox-account evidence is captured — the caller-identity query (DoD-01), the plan and the in-place update (DoD-05, DoD-06), and the apply and destroy legs of the end-to-end run (DoD-07).** Each of those slots carries the exact command to run. No step of the guide is missing; what is missing is an AWS account to run the last four commands against.
 
 ## What I'd do differently
 
 Capture evidence *as* each step happens — paste the version output right after the switch, the plan right after `plan` — instead of reconstructing at the end. Evidence written down during the build is both faster and more trustworthy, and it would have.
+
+I would also keep the sandbox account open while I write this, instead of writing the evidence slots first and discovering at the end that three of them need a live session: the plan, the update and the destroy proof all sit behind the same login, and one login unblocks all three.
