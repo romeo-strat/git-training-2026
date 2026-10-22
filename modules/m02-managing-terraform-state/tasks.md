@@ -7,7 +7,7 @@
 ## Setup
 
 - [ ] Read `brief.md` from top to bottom, including its stack constraints, and the rules for every stage in the [README](../../README.md#rules-for-every-stage). Check its “Still open / ask your trainer” list, and ask the trainer about anything unclear before you build.
-- [ ] Copy `write-up-template.md` to `write-up.md` in this folder and fill in the header table. Leave the template itself untouched.
+- [ ] Copy `write-up-template.md` to `write-up.md` in this folder and fill it in as you go, not after the fact. Leave the template itself untouched.
 - [ ] Confirm that each stage named under "Builds on" in the brief (M01) has been accepted, and that you have the access and tools its stack constraints require. Raise anything missing with the trainer before you build.
 
 ## Build
@@ -33,13 +33,13 @@
 
 ## Write-up
 
-- [ ] **TASK-M02-W01** Under “What I built”: Describe the deliverable named in the brief: what it is, what it does, how it is laid out. A diagram is welcome.
-- [ ] **TASK-M02-W02** Under “Why it's built this way (key decisions)”: One entry per research prompt in the brief's scope, then one for where you spent the most time. Say what you considered, what you chose, why, and what you gave up.
+- [ ] **TASK-M02-W01** Under “What I built”: The protected S3 state bucket and the small configuration whose local state you inspected and then migrated into it. Link your repository.
+- [ ] **TASK-M02-W02** Under “Why it's built this way (key decisions)”: What can leak a secret into state, and why is a state file sensitive even when the configuration has no secrets? Who and what needs access to the state bucket, how narrow can you make it, and why is the bucket kept when everything else is destroyed? What does locking prevent, and what does it not? Where did you spend the most time, and why? Say what you considered, what you chose, why, and what you gave up.
 - [ ] **TASK-M02-W03** Under “AI collaboration log”: If you used AI tools, be specific, not a vague "I used AI to help write some code". If you used none, say so in one line.
-- [ ] **TASK-M02-W04** Under “How to build it (teach it to the next engineer)”: Write this as a guide someone could actually follow to build this stage from scratch — the order you tackled things in, and why that order made sense. Assume the reader has completed the earlier stages this one builds on but hasn't built this stage before.
-- [ ] **TASK-M02-W05** Under “Concepts worth explaining”: Pick 2–3 ideas from this stage and explain each one in your own words, as if teaching it for the first time. The scope in the brief lists the candidates.
-- [ ] **TASK-M02-W06** Under “What tripped me up”: The real obstacles — errors, wrong assumptions, anything that cost you real time. Keep the exact error text; these become the course's common-errors list.
-- [ ] **TASK-M02-W07** Under “Checkpoint evidence”: Show the evidence for every item in the definition of done in `brief.md`, one by one. Paste real output trimmed to the relevant lines, or link a screenshot, and redact anything sensitive.
-- [ ] **TASK-M02-W08** Under “Definition-of-done self-assessment”: Score yourself honestly against every item in the definition of done in `brief.md` before your trainer reviews it: met, partly met or not met, and why. Then rate yourself against each criterion of the stage rubric in the README.
-- [ ] **TASK-M02-W09** Under “What I'd do differently”: If you started this stage over today, what would you change?
-- [ ] **TASK-M02-W10** Final self-review: go back through this list, the brief's definition of done and your write-up. Every item is ticked, or you have written down why not and told the trainer. Then set Status in `write-up.md` to “In review” and tell the trainer the stage is ready for review.
+- [ ] **TASK-M02-W04** Under “How to build it (teach it to the next engineer)”: Write a guide from local state to a protected remote backend with locking demonstrated, using your own state output to show the reasoning, not just the commands.
+- [ ] **TASK-M02-W05** Under “Concepts worth explaining”: Pick 2–3 ideas — what state records and where it lives, why a team needs a remote backend, or migrating local state without recreating anything — and explain each in your own words.
+- [ ] **TASK-M02-W06** Under “What tripped me up”: Anything that didn't behave the way you expected the first time. Keep the exact error text.
+- [ ] **TASK-M02-W07** Under “Checkpoint evidence”: Paste real output, trimmed to the relevant lines and redacted, or link a screenshot. The definition of done in `brief.md` still applies in full — cover DoD-01 and DoD-02, DoD-03 and DoD-04, and DoD-05, plus the DoD-06 and DoD-07 evidence that sits outside those three slots.
+- [ ] **TASK-M02-W08** Under “Definition-of-done self-assessment”: Score yourself honestly against every item in the definition of done in `brief.md` before your trainer reviews it: met, partly met or not met, and why. Then rate yourself against each criterion of the stage rubric in the README. Name any part of your own work you would struggle to explain cold, without re-reading it first.
+- [ ] **TASK-M02-W09** Under “What I'd do differently”: If you started this stage over, what would you do differently?
+- [ ] **TASK-M02-W10** Final self-review: go back through this list, the brief's definition of done and your write-up. Every item is ticked, or you have written down why not and told the trainer. Then tell the trainer the stage is ready for review.

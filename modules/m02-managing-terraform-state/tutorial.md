@@ -32,7 +32,7 @@ Keep two things at hand the whole way:
 - **Your brief** (`brief.md`) — the objective, the scope, the constraints, the deliverable and the definition of done. This tour follows the lab in that brief.
 - **Your write-up** (`write-up.md`) — your copy of `write-up-template.md`. Fill it in **as you go**, not at the end. When you fill in the "How to build it" section, write it for someone who will follow it with no trainer to ask.
 
-> **Where does my code live?** Not in this repository. Build in a folder of your own, and keep your code in your own GitLab repository. Link it from the header of your write-up. This stage uses **two** folders: one for the small configuration, and one for the state bucket.
+> **Where does my code live?** Not in this repository. Build in a folder of your own, and keep your code in your own GitLab repository. Link that repository from **What I built** in your write-up. This stage uses **two** folders: one for the small configuration, and one for the state bucket.
 
 ## Where you're headed
 
@@ -349,14 +349,15 @@ The real error continues with a short paragraph explaining what locking is for. 
 
 ### 6a. Self-check against your definition of done
 
-Open your brief's **Definition of done** and walk it line by line. For each item, make sure your write-up's "Checkpoint evidence" section shows **real pasted output** (trimmed to the relevant lines, and redacted). In particular, make sure you have:
+Open your brief's **Definition of done** and walk it line by line. The definition of done applies in full — but your write-up's **Checkpoint evidence** section collects the evidence into three slots:
 
-- your own state inspected read-only — where it lives and what it records for your parameter;
-- what state holds for the placeholder value, captured without exposing a real credential;
-- a listing showing the state object now sits in the bucket, and a plan after migration showing **no changes**;
-- versioning, encryption and public-access blocking, shown from the **cloud side**;
-- the lock error from a second operation while one holds the lock, and confirmation that no DynamoDB table is used;
-- the bucket retained, everything else destroyed (cloud-side), and a clean history with no state committed.
+- **DoD-01 and DoD-02** — your read-only local state output for one of your own resources, including what it holds for the placeholder value.
+- **DoD-03 and DoD-04** — the bucket listing showing your migrated state, and the bucket's versioning, encryption and public-access settings from the cloud side.
+- **DoD-05** — the lock error you got when a second operation ran while the first was in progress.
+
+Every slot wants **real pasted output**, trimmed to the relevant lines and redacted — not a description from memory. Redact the account ID and ARN as your trainer directs, and never paste a real value where a placeholder stood in for one.
+
+Two more items from the brief's definition of done sit outside those three slots, and still need evidence in your write-up: the bucket retained and everything else destroyed, confirmed from the cloud side, with a clean history and no state committed (DoD-06). DoD-07 is answered by the write-up itself — follow it end to end from a clean state and say so.
 
 ### 6b. The clean-up gate
 
@@ -377,18 +378,37 @@ The rule of thumb: **keep state out, keep the lock file in.** Confirm with `git 
 
 ### 6c. Finish the write-up
 
-Fill the remaining sections of `write-up.md`:
+Fill the remaining sections of `write-up.md`. It is a short document with nine sections, in this order — use the template's section names as they are, and answer each one in your own words:
 
-- **What I built** — the bucket and the configuration that now uses it as its backend, and how they fit together. A diagram is welcome.
-- **Why it's built this way** — one entry per research prompt, plus one for where you spent the most time. Say what you considered, chose, gave up.
-- **AI collaboration log** — specific, or one line saying you used none.
-- **How to build it** — a guide someone could follow from a clean start. Follow it yourself end to end before you call it done.
-- **Concepts worth explaining** — two or three ideas from this stage, in your own words, each with an example from *your* build.
-- **What tripped me up** — the real obstacles, with the exact error text. (These become the course's common-errors list.)
-- **Definition-of-done self-assessment** — score yourself honestly against every DoD item (met / partly met / not met, and why), and rate yourself against each stage-rubric criterion in the README. Name anything you'd struggle to explain cold.
-- **What I'd do differently.**
+| Section | What goes in it |
+| --- | --- |
+| **What I built** | The protected S3 state bucket and the small configuration whose local state you inspected and then migrated into it. Link your repository. |
+| **Why it's built this way (key decisions)** | The four key decisions below — what you considered, what you chose, why, and what you gave up. |
+| **AI collaboration log** | Specific: which tools, two or three concrete asks, one suggestion that was wrong and what you did instead, and what you wrote yourself. Or one line saying you used none. |
+| **How to build it (teach it to the next engineer)** | A guide from local state to a protected remote backend with locking demonstrated, using your own state output to show the reasoning, not just the commands. Follow it yourself end to end before you call it done. |
+| **Concepts worth explaining** | Two or three ideas — what state records and where it lives, why a team needs a remote backend, or migrating local state without recreating anything — in your own words, each with an example from *your* build. |
+| **What tripped me up** | Anything that didn't behave the way you expected the first time, with the exact error text. (These become the course's common-errors list.) |
+| **Checkpoint evidence** | The three evidence slots from 6a: pasted output, trimmed and redacted, or a screenshot. |
+| **Definition-of-done self-assessment** | Met / partly met / not met for every DoD item and why, your rating against each stage-rubric criterion in the README, and anything you'd struggle to explain cold. |
+| **What I'd do differently** | If you started this stage over, what would you do differently? |
 
-Then set **Status** in `write-up.md` to **"In review"** and tell your trainer the stage is ready.
+The four key decisions, in the template's words:
+
+1. What can leak a secret into state, and why is a state file sensitive even when the configuration has no secrets?
+2. Who and what needs access to the state bucket, how narrow can you make it, and why is the bucket kept when everything else is destroyed?
+3. What does locking prevent, and what does it not?
+4. Where did you spend the most time, and why?
+
+Each decision gathers answers from the research prompts you investigated on the way, so every prompt you answered still has a home:
+
+| Key decision | Where the answers come from |
+| --- | --- |
+| 1 — what can leak a secret into state, and why a state file is sensitive even with no secrets in it | Part 1 — its prompt about a state file you did not create and about hand-editing state — and Part 2 — both of its prompts |
+| 2 — who and what needs access to the bucket, how narrow it can be, and why the bucket is kept | Part 3 — all three of its prompts |
+| 3 — what locking prevents, and what it does not | Part 5 — its prompt — and the Part 4 prompts about what a remote backend gives a team and how you know nothing was recreated |
+| 4 — where the time went | Your own answer. The Part 4 prompts also feed your **Concepts worth explaining**, which the template names for exactly those two ideas. |
+
+Then tell your trainer the stage is ready for review.
 
 > **Last thing.** Before you move on, check the "Still open / ask your trainer" list one more time, and confirm the item you'll be asked about at review: whether your sandbox role can create and delete the lock object.
 
