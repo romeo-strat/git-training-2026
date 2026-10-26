@@ -4,9 +4,11 @@
 
 ---
 
-This tour walks you through moving Terraform's state off your machine and into a protected remote backend, one part at a time. It shows you the **moves** — the files to write, the commands to run, the checks to make — and gives you checkpoints so you always know whether you're on track.
+Terraform keeps a written record of what it created. That record is called **state**. This tour starts with state on your own machine and then moves it into a protected S3 bucket, one part at a time. It shows you the **moves** — the files to write, the commands to run, the checks to make — and gives you checkpoints so you always know whether you're on track.
 
 It does **not** do the thinking for you. Your brief asks you to work out several things yourself (they're called *research prompts*), and your write-up is where your answers go. Every time you see a **Your turn** box, that's one of those prompts. Do the investigating there; don't expect the answer from this page.
+
+This stage builds on M01. You do not need to remember everything from it, but you do need the tools and the AWS sign-in it set up. The section below tells you what you should already have.
 
 ## How to use this tour
 
@@ -48,40 +50,217 @@ By the end of this tour you'll have:
 
 ---
 
+## Before you begin — find your footing
+
+This tour assumes you finished M01. It does **not** assume you remember it. If you have never opened a terminal, written a file for a computer to read, or signed in to AWS, work through M01's "Before you begin" section first, then come back. This section gives you the short version you need here.
+
+### What you should already have
+
+- Terraform installed through a version manager, at the version pinned in `versions.env`. Check it:
+- The AWS CLI signed in to your sandbox with a short-lived session, no static keys. Check it:
+- Git and an editor (VS Code).
+- Your stage files: `brief.md`, `tasks.md` and `write-up-template.md`. Make your `write-up.md` copy now if you have not already.
+
+```
+terraform -version
+aws sts get-caller-identity
+git --version
+```
+
+The first prints a version. The second prints who you are in AWS; redact the account details before you paste it anywhere. The third prints a Git version. If any of them fails, go back to M01 rather than working around it.
+
+### The words you'll meet
+
+Terraform is full of short words that carry a lot of meaning. You do not need to memorise this table — come back to it when a word is unfamiliar.
+
+| Word | What it means in this stage |
+| --- | --- |
+| **configuration** | All the `.tf` files in one folder. Terraform reads every `.tf` file in that folder. |
+| **provider** | A plug-in that lets Terraform talk to one service. This stage uses the AWS provider. |
+| **resource** | One thing in the cloud that Terraform manages — here, a parameter and a bucket. |
+| **terminal** | The window where you type commands instead of clicking. |
+| **CLI** | Command-line interface: a tool you run by typing commands, such as the AWS CLI. |
+| **AWS console** | The AWS website, where you can click through the same services. |
+| **account** | Your team's isolated space in AWS, with its own billing and permissions. |
+| **sandbox** | The practice AWS account your trainer prepared for this course. |
+| **role** | The set of permissions your AWS session uses; you assume a role when you sign in. |
+| **identity** | Who AWS thinks you are for a command — your account and role. |
+| **plan** | A dry run: Terraform compares your files with what it last recorded and shows what it would do. |
+| **apply** | Make the plan real. Terraform shows the plan again and asks you to approve it. |
+| **destroy** | The reverse of apply: remove the resources Terraform is managing. |
+| **state** | Terraform's written record of what it is managing. |
+| **local state** | State stored on your own machine, in a file called `terraform.tfstate`. |
+| **remote state** | State stored somewhere other than your machine — here, in an S3 bucket. |
+| **backend** | The place Terraform reads and writes state. The S3 backend keeps state in a bucket. |
+| **S3** | AWS's object-storage service. You put files into it and read them back later. |
+| **bucket** | A container in S3. Bucket names are globally unique across all of AWS. |
+| **object** | One file inside a bucket. Your state becomes one object. |
+| **key** | The object's name or path inside the bucket. It is **not** a password or an access key. |
+| **ARN** | AWS's address format for a resource. It can contain your account ID, so redact it before pasting. |
+| **region** | The part of the world where AWS runs your resources, such as `eu-west-1`. |
+| **versioning** | An S3 setting that keeps multiple versions of an object instead of overwriting the old one. |
+| **encryption at rest** | The setting that makes S3 store objects encrypted. |
+| **public access block** | The S3 setting that prevents a bucket from being made public. |
+| **native locking** | Terraform's own locking for the S3 backend, using a small lock object in the bucket. |
+| **repository** | A project folder tracked by Git, usually hosted on a server such as GitLab. |
+| **commit** | A saved snapshot of your files in Git history. |
+| **DynamoDB** | A separate AWS database service. Older S3 locking used a DynamoDB table; this stage does not. |
+
+### The two folders you will build
+
+You will build two separate configurations. They are separate because the bucket is the one thing this stage keeps when everything else is destroyed.
+
+| Folder | What it holds | Where its state lives |
+| --- | --- | --- |
+| `m02-state-lab` | One small `aws_ssm_parameter` | Local at first, then the S3 bucket |
+| `m02-state-bucket` | The bucket and its protections | Local, in that folder |
+
+The bucket configuration's own state stays local in `m02-state-bucket`. Keep that folder and its state file while the bucket exists, but never commit the state file.
+
+### Reading the commands
+
+- A line starting with `#` is a **comment** — an explanation for you. The computer never sees it, so do not type the `#` part.
+- Text in `<angle brackets>` is a **placeholder**. Replace the whole `<...>` with your real value; never type the angle brackets.
+- A `$` at the start of a line is the prompt your terminal prints. Do not type the `$`.
+- Output in this tour may be trimmed with `...`. Your real output will be longer, and some values will differ.
+- Never paste an Example as evidence. Your evidence is the output from your own terminal.
+
+### Make your write-up copy
+
+If `write-up.md` does not exist yet, make it from the template now. Work in the stage folder where you found `write-up-template.md`:
+
+```
+cp write-up-template.md write-up.md
+```
+
+Leave `write-up-template.md` untouched. Fill in `write-up.md` as you go. If a `write-up.md` already exists, keep it and use it; do not overwrite the template.
+
+---
+
 ## Part 1 — Local state, seen for the first time
 
 **Goal:** write a small configuration, apply it, and watch a state file appear on your machine.
 
 State is the part of Terraform that most people meet only when it breaks. This stage starts by building a tiny configuration so you have your *own* state to inspect — not a slide.
 
+### 1a. Create the first folder and configuration
+
+A **configuration** is the set of `.tf` files in one folder. Terraform reads every `.tf` file in that folder; the file names are yours to choose. This tour keeps the whole first configuration in one file, `main.tf`, so there are fewer moving parts to follow.
+
 **Try it**
 
-1. In a new build folder, create a small configuration with one `aws_ssm_parameter`. Give its value a **made-up placeholder password** — never a real secret.
-2. Initialise and apply:
+1. Create a folder for this configuration and move into it. `mkdir` makes the folder, `cd` moves your terminal into it, and `git init` starts a Git history there:
 
 ```
-terraform init
-terraform apply
+mkdir m02-state-lab
+cd m02-state-lab
+git init
 ```
 
-3. Look in the folder: a `terraform.tfstate` file appears.
+2. Create a file called `main.tf` and add the blocks below. Replace each `<placeholder>` with your own value.
+3. Read the Terraform and AWS provider versions from `versions.env` at the root of this repository. Do not guess them.
 
-**Checkpoint**
-
-- `apply` succeeds and creates one parameter.
-- `terraform.tfstate` now sits in the folder.
-
-**Example — a minimal configuration**
+**Example — a complete `main.tf` for the first configuration**
 
 ```
+terraform {
+  required_version = "<the Terraform version pinned in versions.env>"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "<the AWS provider version pinned in versions.env>"
+    }
+  }
+}
+
+provider "aws" {
+  region = "<your sandbox region>"
+}
+
 resource "aws_ssm_parameter" "placeholder" {
-  name  = "/m02/<your-name>"
+  name  = "/m02/<your-name>-state-lab"
   type  = "String"
   value = "<a-made-up-placeholder-password>"
 }
 ```
 
-The value is a placeholder on purpose: in the next part you'll inspect it, and the whole point is to do that **without ever handling a real credential**.
+Read the file from the outside in:
+
+- The `terraform` block declares what Terraform itself needs. `required_version` is the Terraform version; `required_providers` names the AWS provider and the version you are pinning.
+- The `provider "aws"` block tells Terraform *where* in AWS to work. The `region` is the same region string your sandbox uses — if you don't know it, check your sandbox invitation, run `aws configure get region`, or ask your trainer. Credentials come from the AWS CLI session you signed in with; there is no key in this file.
+- The `resource` block is one thing Terraform will manage. `aws_ssm_parameter` is the **type**; `placeholder` is the **name** you chose. Inside the braces are **arguments** — the settings you supply.
+- An `aws_ssm_parameter` is a named value stored in AWS Systems Manager Parameter Store: think of it as a settings entry an application can read. It is tiny and nearly free, which is why the lab uses it.
+- `name` must be unique in your account and region, so include your own name. `value` must be a **made-up placeholder**, never a real password.
+
+### 1b. Initialise, validate and apply
+
+**Try it**
+
+1. Prepare the folder. `init` downloads the provider and sets up the folder for Terraform:
+
+```
+terraform init
+```
+
+2. Check the configuration's formatting and syntax:
+
+```
+terraform fmt
+terraform validate
+```
+
+3. Create the parameter. `apply` shows you a plan and then asks for approval:
+
+```
+terraform apply
+```
+
+4. Read the plan carefully, then type `yes` at the approval prompt.
+5. Look in the folder. A `terraform.tfstate` file appears.
+
+**Checkpoint**
+
+- `init` reports that Terraform has been successfully initialized, and creates a `.terraform` folder and a `.terraform.lock.hcl` file.
+- `validate` prints `Success! The configuration is valid.`
+- `apply` asks for approval, then ends with a summary like `Apply complete! Resources: 1 added, 0 changed, 0 destroyed.`
+- `terraform.tfstate` is now in the folder; you may also see `terraform.tfstate.backup` beside it.
+
+**Example — what `init` and `apply` print (trimmed)**
+
+```
+Initializing provider plugins...
+- Finding hashicorp/aws versions matching "..."
+- Installing hashicorp/aws ...
+- Installed hashicorp/aws ...
+
+Terraform has created a lock file .terraform.lock.hcl ...
+
+Terraform has been successfully initialized!
+```
+
+```
+Terraform will perform the following actions:
+
+  # aws_ssm_parameter.placeholder will be created
+  + resource "aws_ssm_parameter" "placeholder" {
+      + name  = "/m02/<your-name>-state-lab"
+      + type  = "String"
+      + value = (sensitive value)
+      + ...
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+
+Do you want to perform these actions?
+  Enter a value: yes
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
+```
+
+The plan shows `(sensitive value)` where the parameter's value would be. Terraform marks this argument sensitive, so the CLI hides it. Part 2 looks at what the state file itself holds for that argument.
+
+The `.terraform` folder holds downloaded provider code; it is disposable and must never be committed. The `.terraform.lock.hcl` file records the provider version Terraform selected; it must be committed. The `terraform.tfstate` file is the record this whole stage is about.
 
 **Pause and predict.** Before you apply, guess whether a state file will appear at all, and what it might contain. Then apply and look. Were you right?
 
@@ -89,7 +268,7 @@ The value is a placeholder on purpose: in the next part you'll inspect it, and t
 
 - **What would you check before trusting a state file you did not create — and what goes wrong when state is edited by hand?**
 
-> **Watch out.** Do not put a real password, key or token in the `value`. A made-up placeholder is enough, and keeping real credentials out of state is a rule your definition of done checks (DoD-02).
+> **Watch out.** Do not put a real password, key or token in the `value`. A made-up placeholder is enough, and keeping real credentials out of state is a rule your definition of done checks (DoD-02). Do not run `git add .` until you have added the ignore rule in Part 2: it could stage the state file. If Terraform cannot find credentials, confirm that `aws sts get-caller-identity` works in the same terminal and that you are using the same AWS profile.
 
 > **Explain it.** In one sentence, say what the state file is *for*, as if to a teammate who has never used Terraform.
 
@@ -115,19 +294,38 @@ terraform state list
 terraform state show aws_ssm_parameter.placeholder
 ```
 
-3. Open `terraform.tfstate` in your editor and find where the placeholder value sits.
-4. Add an ignore rule so state never goes into version control:
+3. Open `terraform.tfstate` in your editor and find where the placeholder value sits. From the terminal you can open it with:
+
+```
+code terraform.tfstate
+```
+
+If `code` is not on your PATH, open the file from VS Code's **File → Open** menu instead.
+
+4. Add an ignore rule so state never goes into version control. Create or edit `.gitignore` in this folder. Its contents should be:
 
 ```
 .terraform/
 terraform.tfstate*
 ```
 
+5. Check what Git sees, then commit only the files that belong in history:
+
+```
+git status
+git add main.tf .gitignore .terraform.lock.hcl
+git commit -m "Add the state lab and ignore local state"
+```
+
+If Git asks who you are on your first commit, set your name and email once with `git config --global user.name "<your name>"` and `git config --global user.email "<your email>"`, then run the commit again.
+
 **Checkpoint**
 
 - `state list` names your one resource.
-- `state show` prints its attributes.
-- You can point to the placeholder value inside `terraform.tfstate`.
+- `state show` prints its attributes, with the value shown as `(sensitive value)`.
+- You can point to the placeholder value inside `terraform.tfstate`, where it appears in cleartext.
+- `git status` does **not** list `terraform.tfstate`.
+- Your commit includes `main.tf`, `.gitignore` and `.terraform.lock.hcl`.
 
 **Example — `state list` and `state show` (trimmed)**
 
@@ -139,15 +337,28 @@ $ terraform state show aws_ssm_parameter.placeholder
 # aws_ssm_parameter.placeholder:
 resource "aws_ssm_parameter" "placeholder" {
     arn      = "..."
-    id       = "/m02/<your-name>"
-    name     = "/m02/<your-name>"
+    id       = "/m02/<your-name>-state-lab"
+    name     = "/m02/<your-name>-state-lab"
     type     = "String"
-    value    = "<your placeholder value>"
+    value    = (sensitive value)
     ...
 }
 ```
 
-Look at the attributes Terraform is holding for a resource you wrote one line for. What your state file records — and who can read it — is exactly what this stage is about.
+`state list` gives you **addresses** — the `type.name` pair Terraform uses to identify a resource. `state show` takes one address and prints that resource's stored attributes.
+
+Notice that `state show` hides the value as `(sensitive value)`, the same masking you saw in the plan. That is the CLI protecting you on screen. Opening `terraform.tfstate` is different: it is Terraform's raw record, so the placeholder sits there in cleartext. That contrast — hidden in the command, readable in the file — is the point of this part. Opening `terraform.tfstate` shows the same information as JSON, which is plain text arranged in `"key": value` pairs. All three are read-only: look, take notes, and change nothing.
+
+Look at the attributes Terraform is holding for a resource you wrote five lines for. What your state file records — and who can read it — is exactly what this stage is about.
+
+**Example — the `.gitignore` that keeps state out**
+
+```
+.terraform/
+terraform.tfstate*
+```
+
+The first line ignores the downloaded provider code. The second ignores `terraform.tfstate` and every backup or temporary state file beside it. `.terraform.lock.hcl` does **not** match either line, so it stays committed.
 
 **Pause and predict.** Before you open the file, guess whether your placeholder value will appear in `terraform.tfstate` just as you typed it. Then look.
 
@@ -156,7 +367,9 @@ Look at the attributes Terraform is holding for a resource you wrote one line fo
 - **What can leak a secret into state, and how would you demonstrate that safely without a real credential?**
 - **Why does the course treat a state file as sensitive even when the configuration contains no secrets?**
 
-> **Watch out.** Treat every state file as if it already contains a secret. Do the inspection read-only, redact before you paste anything into your write-up, and never commit the file (DoD-06 checks the ignore rule and a clean history).
+> **Watch out.** Treat every state file as if it already contains a secret. Do the inspection read-only, redact anything account-specific before you paste it into your write-up, and never commit the file (DoD-06 checks the ignore rule and a clean history). Never edit state by hand — not to fix a value, not to remove a resource, not "just this once."
+
+> **Explain it.** In one sentence, say what "read-only" means here, and why it matters.
 
 ---
 
@@ -166,29 +379,75 @@ Look at the attributes Terraform is holding for a resource you wrote one line fo
 
 **This bucket is kept when everything else is destroyed.** Later stages keep their state in it too, so build it as something you would trust to hold their state.
 
+An **S3 bucket** is a container in AWS object storage. A bucket name is globally unique across all AWS accounts, so choose something unlikely to collide. Use only lowercase letters, numbers, dots and hyphens, and keep the name between 3 and 63 characters.
+
 **Try it**
 
-1. In a **separate folder**, write a configuration with an `aws_s3_bucket`.
-2. Add versioning, encryption at rest, and a public access block.
-3. Look up what the bucket bills **before** you create it (it bills for as long as it exists). Then:
+1. Move out of the first folder and create the bucket folder:
+
+```
+cd ..
+mkdir m02-state-bucket
+cd m02-state-bucket
+git init
+```
+
+2. Create a `main.tf` with the blocks below. Replace every `<placeholder>`.
+3. Look up what the bucket bills **before** you create it. A state object is tiny — usually a few kilobytes — so your estimate is storage for that object plus the PUT, GET and DELETE requests Terraform makes when it reads state and takes and releases the lock. Open the AWS pricing page for S3, estimate those, and write the estimate in your notes. This course does not use billing APIs; your estimate is the evidence.
+4. Prepare, format, validate and apply:
 
 ```
 terraform init
+terraform fmt
+terraform validate
 terraform apply
 ```
 
-4. Confirm from the **cloud side** — not from your configuration — that versioning is on, encryption is on, and public access is fully blocked.
+5. Read the plan, then type `yes` at the approval prompt.
+6. Confirm from the **cloud side** — not from your configuration — that versioning is on, encryption is on, and public access is fully blocked. Use the commands in the Example below, or the S3 console: your bucket → **Properties** for versioning and default encryption, and **Permissions** for Block public access.
+7. Add the same ignore rule to this folder **before you stage anything**. Contents of `.gitignore`:
+
+```
+.terraform/
+terraform.tfstate*
+```
+
+Then commit only safe files:
+
+```
+git add main.tf .gitignore .terraform.lock.hcl
+git commit -m "Add the protected state bucket"
+```
 
 **Checkpoint**
 
 - The bucket exists.
-- Every protection is visible from the cloud side (the console or the CLI), not only in your `.tf` files.
+- `get-bucket-versioning` reports `Enabled`.
+- `get-bucket-encryption` reports `AES256`.
+- `get-public-access-block` reports all four settings as `true`.
+- Every protection is visible from the cloud side, not only in your `.tf` files.
+- `git status` does not list `terraform.tfstate` in either folder.
 
 **Example — the shape of the bucket configuration**
 
 ```
+terraform {
+  required_version = "<the Terraform version pinned in versions.env>"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "<the AWS provider version pinned in versions.env>"
+    }
+  }
+}
+
+provider "aws" {
+  region = "<your sandbox region>"
+}
+
 resource "aws_s3_bucket" "state" {
-  bucket = "<your-bucket-name>"
+  bucket = "<globally-unique-bucket-name>"
 }
 
 resource "aws_s3_bucket_versioning" "state" {
@@ -219,7 +478,54 @@ resource "aws_s3_bucket_public_access_block" "state" {
 }
 ```
 
-The lab names these four protections, so the shape is given here — but the exact fields each block needs are yours to confirm in the provider docs, and **how narrow you can make access without breaking Terraform is one of your research prompts**.
+The AWS provider models each protection as a separate resource, so there are four resources here even though there is one bucket. `aws_s3_bucket` creates the container. The versioning resource keeps old versions of the state object. The encryption resource tells S3 to store objects with `AES256` encryption, which means S3 manages the encryption key for you. The public access block sets all four public-access guards. These are the fields the pinned provider version expects. **How narrow you can make access without breaking Terraform is one of your research prompts.**
+
+**Example — cloud-side checks and their output shapes**
+
+```
+aws s3api get-bucket-versioning --bucket <your-bucket-name>
+```
+
+```
+{
+    "Status": "Enabled"
+}
+```
+
+```
+aws s3api get-bucket-encryption --bucket <your-bucket-name>
+```
+
+```
+{
+    "ServerSideEncryptionConfiguration": {
+        "Rules": [
+            {
+                "ApplyServerSideEncryptionByDefault": {
+                    "SSEAlgorithm": "AES256"
+                }
+            }
+        ]
+    }
+}
+```
+
+```
+aws s3api get-public-access-block --bucket <your-bucket-name>
+```
+
+```
+{
+    "PublicAccessBlockConfiguration": {
+        "BlockPublicAcls": true,
+        "IgnorePublicAcls": true,
+        "BlockPublicPolicy": true,
+        "RestrictPublicBuckets": true
+    }
+}
+```
+
+These are the shapes to recognise. Your real output is the evidence; copy it, trim it to the relevant lines, and redact anything account-specific.
 
 **Pause and predict.** Before you apply, guess whether Terraform will make your bucket private or leave it public. Then check from the cloud side.
 
@@ -229,7 +535,9 @@ The lab names these four protections, so the shape is given here — but the exa
 - **Who and what needs access to the bucket, and how narrow can you make that without breaking Terraform?**
 - **Why is the bucket kept when everything else is destroyed — and what risk does that carry?**
 
-> **Watch out.** Do not skip the cloud-side check. "It's in my configuration" is not evidence that it is *actually* encrypted or private; DoD-04 wants it confirmed from the cloud.
+> **Watch out.** Do not skip the cloud-side check. "It's in my configuration" is not evidence that it is *actually* encrypted or private; DoD-04 wants it confirmed from the cloud. If `apply` fails with `BucketAlreadyExists`, the name is taken by another AWS account — choose a more specific name and try again. Do not run `terraform destroy` in this folder: it would delete the bucket this stage keeps.
+
+> **Explain it.** In one sentence, say what each of the three protections changes about the bucket.
 
 ---
 
@@ -237,26 +545,51 @@ The lab names these four protections, so the shape is given here — but the exa
 
 **Goal:** point the first configuration at the bucket and migrate its local state into it — without recreating anything.
 
+A **backend** is where Terraform stores state. Until now yours has been **local** — the `terraform.tfstate` file in your folder. The **S3 backend** stores that same record as an object in your bucket. The object's **key** is its name inside the bucket, such as `state-lab.tfstate`. It is not a password and not an access key.
+
+The brief requires Terraform 1.11 or later for **native locking**, which is switched on with `use_lockfile = true`. Read the exact version from `versions.env`. No DynamoDB table is used or created in this stage; DynamoDB is a separate AWS database service, and older S3 locking used a table there.
+
 **Try it**
 
-1. Back in your **first** configuration, add a `backend "s3"` block that points at the bucket, with native locking turned on.
-2. Migrate the existing local state into it:
+1. Move back to the first configuration:
+
+```
+cd ../m02-state-lab
+```
+
+2. Add a `backend "s3"` block to `main.tf`. If the file already has a `terraform` block, put the `backend` block inside it.
+3. Fill in the bucket name, the key, and the same region you used for the bucket. Leave `use_lockfile = true`.
+4. Migrate the existing local state into the new backend:
 
 ```
 terraform init -migrate-state
 ```
 
-3. When Terraform offers to copy your existing state to the new backend, accept.
-4. Check that nothing was recreated:
+5. Read what Terraform asks. It offers to copy your existing state to the new backend; type `yes`.
+6. Check that nothing was recreated:
 
 ```
 terraform plan
+```
+
+7. Confirm the state object is in the bucket:
+
+```
+aws s3 ls s3://<your-bucket-name>/
+```
+
+8. Confirm Terraform is now reading the remote state:
+
+```
+terraform state list
 ```
 
 **Checkpoint**
 
 - `init -migrate-state` completes and says it configured the new backend.
 - `plan` reports **no changes** — nothing was recreated.
+- The bucket listing shows a `.tfstate` object with the key you chose.
+- `terraform state list` still names `aws_ssm_parameter.placeholder`.
 
 **Example — the backend block**
 
@@ -271,13 +604,36 @@ terraform {
 }
 ```
 
+The `backend` block must sit inside a `terraform` block. If your `main.tf` already has a `terraform` block from Part 1, add `backend "s3"` inside it; Terraform also accepts a second `terraform` block, but keeping one is clearer. The `bucket` is the S3 bucket you built in Part 3. The `key` is the object name inside that bucket; use a different key for each configuration that shares the bucket. `use_lockfile = true` turns on native locking. The backend block is read before Terraform evaluates variables, so use literal values here rather than variable references.
+
+**Example — the migration prompt and result (trimmed)**
+
+```
+Initializing the backend...
+
+Do you want to copy existing state to the new backend?
+  Pre-existing state was found while migrating the previous "local" backend to the
+  newly configured "s3" backend.
+  Enter a value: yes
+
+Successfully configured the backend "s3"! Terraform will automatically
+use this backend unless the backend configuration changes.
+```
+
 **Example — the plan after migrating**
 
 ```
 No changes. Your infrastructure matches the configuration.
 ```
 
-That "no changes" is the whole point of migrating rather than starting over: Terraform moved its record of your resource into the bucket, so the resource itself was left alone.
+Read that plan yourself. What does it say, and what would it say if Terraform had lost track of your parameter? The evidence in the plan is what your research prompt asks you to reason about, so it is not spelled out here.
+
+**Example — the state object in the bucket**
+
+```
+$ aws s3 ls s3://<your-bucket-name>/
+2026-10-26 12:00:00       1234 <your-state-key>.tfstate
+```
 
 **Pause and predict.** Before you run `plan`, predict: will Terraform want to recreate your parameter, or leave it alone? Then run it and compare.
 
@@ -286,9 +642,9 @@ That "no changes" is the whole point of migrating rather than starting over: Ter
 - **What does a remote backend give a team that local state cannot?**
 - **How do you know that nothing was recreated?**
 
-> **Watch out.** If `plan` shows anything to add, change or destroy, the migration did not line up — investigate before you do anything else, and never edit state by hand. And once the state lives remotely, the old local `terraform.tfstate` is stale: don't treat it as the source of truth.
+> **Watch out.** If `plan` shows anything to add, change or destroy, the migration did not line up — stop and investigate before you do anything else, and never edit state by hand. Check that the bucket name, key and region match everywhere. And once the state lives remotely, the old local `terraform.tfstate` is stale: `terraform state list` and the bucket are the source of truth now, so don't treat the local file as one.
 
-> **Explain it.** In one sentence, say what changed for your configuration when the state moved into the bucket.
+> **Explain it.** In one sentence, say where your state lives now and how Terraform finds it.
 
 ---
 
@@ -296,32 +652,57 @@ That "no changes" is the whole point of migrating rather than starting over: Ter
 
 **Goal:** watch native locking refuse a second operation while one is in progress.
 
+A **lock** is a marker Terraform takes while it is working, so a second operation can tell that an operation is already running. With the S3 backend and `use_lockfile = true`, that marker is a small lock object in the bucket. You do not create it by hand.
+
 **Try it**
 
-1. In one terminal, start an operation and leave it **at the approval prompt** (do not confirm):
-
-```
-terraform apply
-```
-
-2. In a **second** terminal, run:
+1. Your last `plan` showed no changes. If you run `terraform apply` now, Terraform will see there is nothing to do and exit **without waiting at the approval prompt**, so it would not hold the lock. First make a small change: open `main.tf` and change the parameter's `value` placeholder, for example by adding `-v2`. Keep it a made-up placeholder.
+2. Confirm the change is visible:
 
 ```
 terraform plan
 ```
 
-3. Read the lock error. Capture it — it is required evidence.
+3. In your **first** terminal, start the operation:
+
+```
+terraform apply
+```
+
+4. Leave it at the approval prompt. **Do not type `yes` yet.** The operation is now in progress and holding the lock.
+5. Open a **second** terminal in the same folder. It must use the same AWS session: the same profile and the same exported credentials as the first terminal. In VS Code, use **Terminal → New Terminal** (or the split-terminal button), then move into the folder if the new terminal starts somewhere else:
+
+```
+cd <path-to>/m02-state-lab
+```
+
+6. In the second terminal, run:
+
+```
+terraform plan
+```
+
+7. Read the lock error. Capture it — it is required evidence.
+8. Return to the first terminal and type `yes` to finish the change.
+9. Confirm the configuration is clean again:
+
+```
+terraform plan
+```
 
 **Checkpoint**
 
 - The second command is **refused** with a lock error, naming the operation that holds the lock.
+- The first terminal finishes the update and reports the change.
+- The final `plan` reports no changes.
 
 **Example — the lock error (trimmed)**
 
 ```
 Error: Error acquiring the state lock
 
-Error message: <the message recorded with the lock>
+Error message: operation error S3: PutObject, https response error StatusCode: 412,
+  RequestID: ..., HostID: ..., api error PreconditionFailed: Precondition Failed
 Lock Info:
   ID:        <...>
   Path:      <...>
@@ -329,6 +710,7 @@ Lock Info:
   Who:       <...>
   Version:   <...>
   Created:   <...>
+  Info:      <...>
 ```
 
 The real error continues with a short paragraph explaining what locking is for. Read that paragraph yourself — deciding **what locking prevents, and what it does not**, is one of your research prompts, so it isn't spelled out here.
@@ -339,21 +721,23 @@ The real error continues with a short paragraph explaining what locking is for. 
 
 - **What does locking prevent — and what does it not?**
 
-> **Watch out.** If your sandbox role cannot create and delete the lock object, you'll see a permissions error instead. That is a gap in your sandbox access: tell your trainer rather than working around it.
+> **Watch out.** If your sandbox role cannot create and delete the lock object, you'll see a permissions error instead. That is a gap in your sandbox access: tell your trainer rather than working around it. If the second `plan` does **not** show a lock error, the first `apply` was probably not waiting — check that step 2 showed a real change before you started it. Do not try to remove a lock by hand; recovering a lock left behind is outside this stage.
+
+> **Explain it.** In one sentence, say what you saw happen when the second command ran.
 
 ---
 
 ## Part 6 — Wrap up
 
-**Goal:** land the landing. Prove it's all done, clean up, then write it up.
+**Goal:** stick the landing. Prove it's all done, clean up, then write it up.
 
 ### 6a. Self-check against your definition of done
 
 Open your brief's **Definition of done** and walk it line by line. The definition of done applies in full — but your write-up's **Checkpoint evidence** section collects the evidence into three slots:
 
-- **DoD-01 and DoD-02** — your read-only local state output for one of your own resources, including what it holds for the placeholder value.
+- **DoD-01 and DoD-02** — your read-only local state output for one of your own resources, including the command you ran and what it holds for the placeholder value.
 - **DoD-03 and DoD-04** — the bucket listing showing your migrated state, and the bucket's versioning, encryption and public-access settings from the cloud side.
-- **DoD-05** — the lock error you got when a second operation ran while the first was in progress.
+- **DoD-05** — the lock error you got when a second operation ran while the first was in progress, plus your `main.tf` backend block showing `use_lockfile = true` and no `dynamodb_table`.
 
 Every slot wants **real pasted output**, trimmed to the relevant lines and redacted — not a description from memory. Redact the account ID and ARN as your trainer directs, and never paste a real value where a placeholder stood in for one.
 
@@ -366,6 +750,51 @@ This stage has one exception to the usual rule: **you keep the bucket.** Before 
 - **No stored credential.** Nothing long-lived anywhere.
 - **No state in version control.** `terraform.tfstate*` is ignored and never committed — check a clean commit history.
 - **Everything else destroyed, bucket kept.** Destroy the small configuration's resources and any other resources you created, confirmed from the cloud side, but **leave the bucket in place** for the later stages that reuse it.
+
+**Try it**
+
+1. Move to the small configuration and destroy it. If you are in the bucket folder, `cd ../m02-state-lab`; otherwise move to your first build folder:
+
+```
+cd ../m02-state-lab
+terraform destroy
+```
+
+Read the plan, then type `yes`. This removes the parameter. It does **not** remove the bucket, because the bucket is in the other folder.
+
+2. Confirm the parameter is gone from the cloud side. The expected result is an error saying the parameter does not exist — that error is the success check:
+
+```
+aws ssm get-parameter --name "/m02/<your-name>-state-lab"
+```
+
+3. Confirm the bucket is still there and its protections are intact:
+
+```
+aws s3api head-bucket --bucket <your-bucket-name>
+aws s3api get-bucket-versioning --bucket <your-bucket-name>
+```
+
+`head-bucket` prints nothing when the bucket exists. If it succeeds, the bucket is still there.
+
+4. Confirm your session is still a short-lived role, not a stored access key:
+
+```
+aws sts get-caller-identity
+```
+
+The `Arn` should contain `assumed-role`, not an IAM user. Redact the account details before you paste it.
+
+5. Run the Git checks in **both** build folders. The first command should print nothing; that means no state file was ever committed:
+
+```
+git log --all --oneline -- '*.tfstate'
+git status
+```
+
+6. Do **not** run `terraform destroy` in `m02-state-bucket`. That would delete the bucket and its protections. The bucket's local state file stays in that folder, ignored by Git, for as long as the bucket exists.
+
+The state object for the small configuration also stays in the bucket after `terraform destroy`. That is expected: Terraform updates the object to record that the configuration now manages no resources.
 
 **Example — the ignore rule that keeps state out**
 
@@ -418,18 +847,30 @@ Then tell your trainer the stage is ready for review.
 
 | Stage file | Purpose |
 | --- | --- |
-| `<first config>.tf` | The small configuration whose local state you inspected and then migrated. |
-| `<bucket config>.tf` | The state bucket and its versioning, encryption and public-access settings. |
-| `.gitignore` | Keeps state and downloaded providers out of version control; keeps the lock file in. |
+| `m02-state-lab/main.tf` | The small configuration whose local state you inspected and then migrated. |
+| `m02-state-bucket/main.tf` | The state bucket and its versioning, encryption and public-access settings. |
+| `.gitignore` (in both folders) | Keeps state and downloaded providers out of version control; keeps the lock file in. |
+| `terraform.tfstate` | Local state before migration; after migration it is stale and stays ignored. |
+| `.terraform.lock.hcl` | The provider lock file; commit it. |
 | `write-up.md` | Your evidence and your teaching guide. Fill it in as you build. |
 
 | Command | What it does |
 | --- | --- |
+| `terraform init` | Prepares a folder: downloads providers, writes the lock file, configures the backend. |
+| `terraform init -migrate-state` | Moves existing local state into the configured backend. |
+| `terraform fmt` | Rewrites Terraform files into the standard format (or changes nothing). |
+| `terraform validate` | Checks the configuration for syntax and internal errors. |
+| `terraform plan` | Shows what would change. After migration, expect **no changes**. |
+| `terraform apply` | Makes the changes; here it also creates the parameter and the bucket. |
+| `terraform destroy` | Removes what the configuration manages — but **not** the bucket in the other folder. |
 | `terraform state list` | Lists the resources your state is tracking (read-only). |
 | `terraform state show <addr>` | Prints one resource's stored attributes (read-only). |
-| `terraform init -migrate-state` | Moves existing local state into the configured backend. |
-| `terraform plan` | Shows what would change. After migration, expect **no changes**. |
-| `terraform apply` | Makes the changes; here it also creates the bucket. |
-| `terraform destroy` | Removes what you created — but **not** the state bucket. |
+| `aws sts get-caller-identity` | Shows which AWS identity your CLI session is using. |
+| `aws s3 ls s3://<bucket>/` | Lists the objects in your bucket. |
+| `aws s3api get-bucket-versioning --bucket <bucket>` | Shows whether versioning is enabled. |
+| `aws s3api get-bucket-encryption --bucket <bucket>` | Shows the bucket's default encryption. |
+| `aws s3api get-public-access-block --bucket <bucket>` | Shows the bucket's public-access settings. |
+| `aws s3api head-bucket --bucket <bucket>` | Succeeds if the bucket exists; prints nothing. |
+| `aws ssm get-parameter --name <name>` | Reads a parameter; after clean-up it should report that it does not exist. |
 
 Remember: this tour showed you the moves. The **answers** to the research prompts are yours — that's the work, and it's exactly what your write-up is for.
