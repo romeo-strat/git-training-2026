@@ -160,23 +160,58 @@ Three commands worth making reflex from M01: `terraform fmt` before every commit
 Nothing tripped me up in M02. The workflow from local state inspection to migrating to a protected S3 backend with locking behaved as expected.
 ## Checkpoint evidence
 
-- **DoD-01 and DoD-02 —** Local state, read-only, and what it holds for a sensitive value.
-  - Configuration: `m02-state-lab` owns `aws_ssm_parameter.placeholder` with `name = "/m02/placeholder"`, `type = "String"`, `value = "m02-placeholder-not-a-real-secret"`.
-  - Read-only inspection steps followed: `terraform state list`, `terraform state show aws_ssm_parameter.placeholder`. In `state show`, Terraform masks the value as `(sensitive value)` in CLI output; the cleartext value sits in the raw `terraform.tfstate` JSON under the resource's attributes. The placeholder was used deliberately (no real credential) to demonstrate the gap between CLI redaction and on-disk clarity. **Evidence: captured from build (placeholder only).**
+### DoD-01 and DoD-02 — Local state, read-only, and what it holds for a sensitive value
+- Configuration: `m02-state-lab/` owns `aws_ssm_parameter.placeholder` with `name = "/m02/placeholder"`, `type = "String"`, `value = "m02-placeholder-not-a-real-secret"`.
+- Read-only inspection (captured during build):
+```bash
+terraform state list
+# aws_ssm_parameter.placeholder
 
-- **DoD-03 and DoD-04 —** The migrated state object and the bucket's protections, from the cloud side.
-  - Bucket (retained): `romeo-bucket-089714157758-ap-southeast-1-an` in `ap-southeast-1` (ARN `arn:aws:s3:::romeo-bucket-089714157758-ap-southeast-1-an`).
-  - Protections applied in `m02-state-bucket`: versioning enabled, server-side encryption with SSE-S3 (AES256), all four public access block flags set to `true`. Confirmed via AWS APIs on the bucket.
-  - Migration: `m02-state-lab` configured with `backend "s3"` pointing to the bucket with `use_lockfile = true`, state migrated via `terraform init -migrate-state`. After migration, `terraform plan` showed no changes (nothing recreated). **Evidence: bucket exists and protections applied; migration completed with clean plan.**
+terraform state show aws_ssm_parameter.placeholder
+# (value shown as (sensitive value) by CLI redaction)
+```
+- Raw state inspection showed the cleartext value in `terraform.tfstate` under the resource attributes (placeholder only; no real credential). This demonstrates the gap between CLI redaction and on-disk clarity.
 
-- **DoD-05 —** The lock error.
-  - Backend configured in `m02-state-lab/versions.tf`/`main.tf` with `backend "s3" { bucket = "romeo-bucket-089714157758-ap-southeast-1-an", key = "<state-key>.tfstate", region = "ap-southeast-1", use_lockfile = true }` — no DynamoDB table used. Native S3 locking demonstrated by running `terraform apply` in one terminal at approval prompt while `terraform plan` in a second terminal was refused with a lock error (S3 PreconditionFailed / "Error acquiring the state lock" with Lock Info). **Evidence: demonstrated per lab steps.**
+### DoD-03 and DoD-04 — Migrated state object and bucket protections (cloud side)
+- Bucket (retained): `romeo-bucket-089714157758-ap-southeast-1-an` in `ap-southeast-1` (ARN `arn:aws:s3:::romeo-bucket-089714157758-ap-southeast-1-an`)
+```bash
+aws s3api head-bucket --bucket romeo-bucket-089714157758-ap-southeast-1-an
+# {"BucketArn": "arn:aws:s3:::romeo-bucket-089714157758-ap-southeast-1-an", "BucketRegion": "ap-southeast-1", ...}
+```
+```bash
+aws s3api get-bucket-versioning --bucket romeo-bucket-089714157758-ap-southeast-1-an
+# {"Status": "Enabled"}
+```
+```bash
+aws s3api get-bucket-encryption --bucket romeo-bucket-089714157758-ap-southeast-1-an
+# SSE-S3 (AES256) enabled
+```
+```bash
+aws s3api get-public-access-block --bucket romeo-bucket-089714157758-ap-southeast-1-an
+# {"PublicAccessBlockConfiguration": {"BlockPublicAcls": true, "IgnorePublicAcls": true, "BlockPublicPolicy": true, "RestrictPublicBuckets": true}}
+```
+- Migration: `backend "s3"` configured in `m02-state-lab` with `use_lockfile = true` (no DynamoDB), state migrated via `terraform init -migrate-state`. After migration, `terraform plan` showed **no changes** (nothing recreated).
 
-- **DoD-06 —** The bucket retained and everything else destroyed, confirmed from the cloud side, with a clean history.
-  - Bucket retained (confirmed via `aws s3api head-bucket`). Everything else (`m02-state-lab` resources) destroyed. `.gitignore` in both folders ignores `.terraform/` and `*.tfstate*`. No state files committed to git. **Evidence: bucket retained, lab resources destroyed, no state in version control.**
+### DoD-05 — Lock error (native S3 locking)
+- Backend configured with native S3 locking: `use_lockfile = true`, no DynamoDB table.
+- Demonstration: with `terraform apply` running in one terminal at the approval prompt (holding a lock), `terraform plan` in a second terminal was refused with a lock error (S3 `PreconditionFailed` / "Error acquiring the state lock" including Lock Info with ID/path/operation/who/version/created/Info). Lock released after accepting/aborting the first apply.
 
-- **DoD-07 —** The write-up followed end to end from a clean state by a first-time learner, with locking demonstrated unaided.
-  - Write-up documents the full path (two-phase build, read-only inspection, migration, lock demo, clean-up) and can be followed verbatim. **Evidence: write-up complete as above.**
+### DoD-06 — Bucket retained, everything else destroyed, no secrets committed
+```bash
+aws ssm get-parameter --name /m02/placeholder --region ap-southeast-1
+# ParameterNotFound (resource destroyed)
+
+aws s3api head-bucket --bucket romeo-bucket-089714157758-ap-southeast-1-an
+# success (bucket retained)
+
+git log --oneline -2
+# 2d33e63 modified:   modules/m02-managing-terraform-state/write-up.md
+# 2c924ae write up m02
+```
+- `.gitignore` in both folders ignores `.terraform/` and `terraform.tfstate*`. No state files committed to version control.
+
+### DoD-07 — Teach-it end-to-end
+- Write-up documents full path (two-phase build, read-only inspection, migration, lock demo, clean-up) and is written to be followable from a clean state.
 
 ## Definition-of-done self-assessment
 
