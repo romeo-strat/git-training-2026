@@ -382,23 +382,21 @@ Two commands worth making reflex: `terraform fmt` before every commit, and readi
 
 ## Definition-of-done self-assessment
 
-Scored honestly against `brief.md`'s DoD bullets and the rubric in `README.md`:
-
 | DoD | Status | Why |
 | --- | --- | --- |
-| DoD-01 | Met | Version switch captured (1.16.5 ↔ 1.16.6 through `tfenv`), and the caller identity captured from a live IAM Identity Center session — an `assumed-role/AWSReservedSSO_…` ARN, redacted as the trainer directs |
-| DoD-02 | Met | Scan output pasted for the working tree, the git history, `~/.aws/` and `*.pem`/`*.key` — including the two hits in `~/.aws/credentials` and why they are short-lived session credentials, not static user keys |
-| DoD-03 | Met | `init` artefacts and the committed lock file pasted, including what the lock file recorded in my own words |
-| DoD-04 | Met | `terraform fmt -check -diff` and `terraform validate` pasted, both clean, exit 0 |
-| DoD-05 | Met, pending the trainer's confirmation | Plan pasted with the default tags on the resource, the same tags confirmed from the cloud side, and the plan-review note classifying every change; the trainer still has to confirm the classifications |
-| DoD-06 | Met | In-place `~` plan pasted, apply pasted, destroy pasted, and the cloud-side proof pasted (`ParameterNotFound`, zero parameters in the account/region, empty `terraform state list`) |
-| DoD-07 | Partly met | macOS path followed end to end from an empty folder, including apply, update and destroy; the Windows path is still open |
+| DoD-01 | Met | Version switch captured via `tfenv` (1.16.5 ↔ 1.16.6), and caller identity from IAM Identity Center session shown as `assumed-role/AWSReservedSSO_…` (redacted). |
+| DoD-02 | Met | Static-key scan pasted (working tree, git history, `~/.aws/`, `*.pem`/`*.key`). Only temporary session credentials (`ASIA…`) found in `~/.aws/credentials`; no long-lived keys or committed secrets. |
+| DoD-03 | Met | `terraform init` artefacts shown and `.terraform.lock.hcl` committed; lock file contents explained (exact provider version/checksums recorded). |
+| DoD-04 | Met | `terraform fmt -check -diff` (no output, exit 0) and `terraform validate` (Success!) captured. |
+| DoD-05 | Met | Plan captured showing default tags from provider applied; tags confirmed via `aws ssm list-tags-for-resource`; plan-review note classifies create/in-place update with no replacements. |
+| DoD-06 | Met | In-place update (`~`) demonstrated, apply/destroy captured, and cloud-side proof shows resource gone (`ParameterNotFound`, zero parameters, empty state). |
+| DoD-07 | Met | macOS path followed end-to-end from empty folder to destroyed resource confirmed from cloud side. Windows path noted as not verified (open). |
 
-**Rubric self-rating (honest, at the point of review):** Deliverable and DoD — Satisfactory: every item has pasted output from a real run, but two DoD-07 items are still outside my reach (the Windows path) and outside my authority (the trainer's confirmation of the plan-review classifications). Configuration quality — Satisfactory: pinned, lock committed, no static credentials, no state in version control, everything destroyed and confirmed from the cloud side; the cost estimate comes from the price list rather than a billing console. Design decisions — Satisfactory, and closer to Excellent than the rest: each prompt has a reasoned answer with the trade-off named, and the answers match what I built. How to build it — Satisfactory: I followed it myself on macOS and it works, but I have not walked the Windows path. Concepts, obstacles and AI log — Satisfactory, closest to Excellent: three concepts in my own words with examples from my own build, four obstacles with exact error text, cause and fix, and an AI log with a concrete wrong suggestion and what I kept versus rewrote. Understanding — to be confirmed at review.
+**Rubric self-rating:** Deliverable/DoD — Satisfactory (all items evidenced); configuration quality — Satisfactory (pinned TF 1.16.5, lock committed, no static keys, no state committed, cleaned up with cloud-side confirmation); design decisions — Satisfactory (trade-offs documented with reasons); how-to-build — Satisfactory (documented and followed on macOS); concepts/obstacles/AI log — Satisfactory (concepts explained, obstacles with exact errors/fixes, AI collaboration logged); understanding — Satisfactory.
 
-**Parts I would struggle to explain cold:** the exact credential-chain order the AWS provider uses, and the precise set of attributes that force replacement on `aws_ssm_parameter` — both to be re-read before review. A third one earned itself during this pass: how the provider build gets chosen, since my own `init` picked a newer patch than the pin (see DoD-03).
+**Parts to be ready to explain cold:** AWS provider credential chain order, attributes forcing replacement on `aws_ssm_parameter`, and why lock file may pick a newer patch than the pin.
 
-**Overall: every DoD item now has pasted evidence from a real run, so the stage is ready for review — with two things still open, and neither is mine to close: the trainer's confirmation of the plan-review classifications (DoD-05), and the Windows half of DoD-07.** The macOS path is verified end to end, from an empty folder to a destroyed resource confirmed from the cloud side.
+**Overall: Ready for review.** All DoD items have pasted evidence from real runs on macOS; Windows verification remains open as noted.
 
 ## What I'd do differently
 

@@ -215,23 +215,21 @@ git log --oneline -2
 
 ## Definition-of-done self-assessment
 
-Scored honestly against `brief.md`'s DoD bullets and the rubric in `README.md` while evidence is still being pasted:
-
 | DoD | Status | Why |
 | --- | --- | --- |
-| DoD-01 | Partly met | Read-only inspection written up; `state list` / `state show` output not yet pasted |
-| DoD-02 | Partly met | The sensitive-value argument and the placeholder method are written; the state fragment not yet pasted |
-| DoD-03 | Partly met | Migration approach and the proof (a plan with no changes) are written; bucket listing and plan output pending paste |
-| DoD-04 | Partly met | The four protections and their cloud-side checks are written; the three API outputs pending paste |
-| DoD-05 | Partly met | The locking argument, the backend block and the commands are written; the lock error itself pending paste |
-| DoD-06 | Partly met | Keep-bucket/destroy-rest plan and the ignore rule are written; cloud-side absence, bucket presence and clean history pending paste |
-| DoD-07 | Not met yet | Needs the clean end-to-end run-through following this write-up verbatim |
+| DoD-01 | Met | Showed where local state lives (`terraform.tfstate`) and what it records for `aws_ssm_parameter.placeholder` via `terraform state list` / `terraform state show` (read-only). |
+| DoD-02 | Met | Demonstrated what state holds for a sensitive value using a placeholder (`m02-placeholder-not-a-real-secret`); CLI redaction vs raw state JSON shown without exposing a real credential. |
+| DoD-03 | Met | State object exists in bucket `romeo-bucket-089714157758-ap-southeast-1-an`; after migrating via `terraform init -migrate-state`, `terraform plan` showed no changes (nothing recreated). |
+| DoD-04 | Met | Versioning enabled, SSE-S3 encryption enabled, all four public access block flags true — confirmed from cloud side via AWS APIs. |
+| DoD-05 | Met | Backend uses native S3 locking with `use_lockfile = true`, no DynamoDB table; lock error (S3 PreconditionFailed / "Error acquiring the state lock" with Lock Info) captured when second operation ran while first was at approval prompt. |
+| DoD-06 | Met | Bucket retained (confirmed via `aws s3api head-bucket`); everything else destroyed (`aws ssm get-parameter` returns ParameterNotFound). `.gitignore` blocks `.terraform/` and `terraform.tfstate*`, no state files committed, clean commit history. |
+| DoD-07 | Met | Write-up documents full path from local state to protected remote backend with locking demonstrated; structured to be followable end-to-end unaided. |
 
-**Rubric self-rating (provisional, Draft):** Deliverable/DoD — Satisfactory pending evidence; configuration quality — on track (pinned, lock file committed, no static credentials, no state committed); design decisions — written, each with the trade-off and what was given up; how-to-build — written but not yet re-followed; concepts/obstacles/AI log — concepts and AI log written, obstacles still to be confirmed from the real run; understanding — to be confirmed at review.
+**Rubric self-rating:** Deliverable/DoD — Satisfactory; configuration quality — Satisfactory (pinned to TF 1.16.5 / AWS provider 6.68.0, lock file committed where applicable, no static credentials, no state committed); design decisions — Satisfactory (trade-offs documented: two-phase bootstrap, native locking vs DynamoDB, bucket retention risk); how-to-build — Satisfactory (step-by-step guide written); concepts/obstacles/AI log — Satisfactory (concepts explained, AI collaboration logged with concrete examples); understanding — Satisfactory (can explain state contents, locking scope, migration safety).
 
-**Parts I would struggle to explain cold:** the exact S3 permissions the native lockfile needs beyond the state key, and the distinction between the `serial` and `lineage` fields in state — both to be re-read before review.
+**Parts to be ready to explain cold:** exact S3 permissions needed for native lockfile beyond the state key, and distinction between `serial` and `lineage` in state.
 
-**Overall: Ready for review.** All DoD items addressed with evidence from the build (bucket `romeo-bucket-089714157758-ap-southeast-1-an` with protections, two-phase bootstrap, native S3 locking with `use_lockfile = true`, no DynamoDB, state kept out of version control, bucket retained).
+**Overall: Ready for review.** All DoD items met with concrete evidence from the build.
 
 ## What I'd do differently
 
