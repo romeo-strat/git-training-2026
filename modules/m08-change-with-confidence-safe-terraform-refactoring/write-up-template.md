@@ -1,72 +1,47 @@
-# M08 — Change with Confidence: Safe Terraform Refactoring — Write-up
+# M08 Write-Up — Change with Confidence: Safe Terraform Refactoring
 
-> This write-up is meant to become part of the content library: write it so the next cohort could learn from it, not just as a record of what you did. Copy this file to `write-up.md` in this folder and fill in the copy; leave this template untouched. Write each section as you build, not after it works. Never paste credentials, tokens or key material anywhere in this file.
+> **Instructions for the Trainee:** 
+> Copy this file to `write-up.md` in this folder and fill it in as you go, not at the end. Write it so a trainee starting this stage next cohort could follow your path. Delete all blockquotes (like this one) before submitting. **Never paste credentials, tokens, or key material.**
 
-| | |
-| --- | --- |
-| Trainee | |
-| Status | Draft <!-- Draft → In review → Revising → Accepted --> |
-| Build location | <!-- your GitLab repository and branch or merge request holding your Terraform code --> |
-| Hours spent | <!-- an honest total --> |
+## 1. Deliverable & Evidence
+> Link your code and provide the exact output proving it works based on the Definition of Done (DoD). Paste real output, trimmed to the relevant lines and redacted, or link a screenshot. 
 
-## What I built
+**Repository:** [Link here]
+**Deliverable:** The small configuration after its three refactors — a rename, an adoption and a stop-managing — with the saved plans that show no destroys, and your note on legacy state commands.
 
-Describe the deliverable named in the brief: what it is, what it does, how it is laid out. A diagram is welcome.
+*   **DoD-01:** The saved-plan summary after each of the three refactors showing no destroys or replacements, and your `jq` output listing the action on every resource. 
+    *   *Output/Evidence:* 
+*   **DoD-02:** The output showing the renamed resource kept its identity, the adopted resource plans clean, and the stopped resource still exists in AWS.
+    *   *Output/Evidence:* 
+*   **DoD-03:** The diff for each refactor, and your list of every command you ran against state.
+    *   *Output/Evidence:* 
 
-## Why it's built this way (key decisions)
+## 2. How to build it (teach it to the next trainee)
+> Write a quick guide from a small configuration to a rename, an adoption and a stop-managing with no destroys. Use your own output/logs to show your reasoning, not just a list of commands. Assume the reader is a peer who hasn't started this stage yet.
 
-One entry per research prompt in the brief's scope, then one for where you spent the most time. Say what you considered, what you chose, why, and what you gave up.
+## 3. Decisions & Core Concepts
+> This section covers the *why* behind your build and the theory you applied. 
 
-- How you can tell, before applying, that a refactor will not touch real infrastructure, and what is responsible for a resource that stops being managed and how you avoid orphaning cost.
-- What the generated configuration got wrong or left out, and how you decided what to keep.
-- What the action on every resource looks like in a saved plan's JSON form.
-- How you recover when an apply stops part-way, and what you check before you run it again.
-- Why the course prefers changes that appear in a plan over commands that edit state, and when you might still see those commands.
-- Where did you spend the most time, and why?
+**Key Decisions**
+*   **How can you tell before applying that a refactor won't touch real infrastructure, and how do you avoid orphaned cost when you stop managing a resource?** 
+*   **What did the generated configuration get wrong or leave out, and how did you decide what to keep?** 
+*   **Why prefer changes that appear in a plan over commands that edit state, and when might you still meet those commands?** 
 
-## AI collaboration log
+**Concepts Applied**
+> Pick 2–3 ideas from this list: reading plans as JSON with `jq`, recovering from a partial apply or a failed destroy, or targeted operations. Explain each in your own words based on how you actually used it in this stage. 
 
-If you used AI tools, be specific, not a vague "I used AI to help write some code". If you used none, say so in one line.
+## 4. AI Collaboration Log
+> Be specific. If you used no AI, state that in one line.
 
-- Which AI tool(s) did you use, and for roughly what portion of the work?
-- Give 2–3 concrete examples of what you asked for.
-- At least one moment the tool's first suggestion was wrong, inefficient, or didn't fit your design — what was wrong with it, how you noticed, and what you did instead.
-- What did you accept largely as-is, and what did you rewrite or redesign yourself?
+*   **Tools & Scope:** Which AI tool(s) did you use, and for roughly what portion of the work?
+*   **Prompt Examples:** Give 2–3 concrete examples of what you asked for.
+*   **Course Correction:** Describe at least one moment the tool's first suggestion was wrong, inefficient, or didn't fit your design. What was wrong, how did you notice, and what did you do instead?
+*   **Human Intervention:** What did you accept largely as-is, and what did you rewrite or redesign yourself?
 
-## How to build it (teach it to the next engineer)
+## 5. Retrospective & Self-Assessment
+> Reflect on the friction you faced, how you grade your own work, and what you would change. 
 
-Write this as a guide someone could actually follow to build this stage from scratch — the order you tackled things in, and why that order made sense. Assume the reader has completed the earlier stages this one builds on but hasn't built this stage before.
-
-## Concepts worth explaining
-
-Pick 2–3 ideas from this stage and explain each one in your own words, as if teaching it for the first time. The scope in the brief lists the candidates.
-
-- Refactoring principles: renaming and removing resources without destruction
-- Adopting existing, unmanaged resources into Terraform
-- Verifying refactors mechanically: reading plans as JSON with `jq`
-- Emergency recovery: handling partial applies and failed destroys
-- Advanced troubleshooting: targeted operations and legacy state commands
-
-## What tripped me up
-
-The real obstacles — errors, wrong assumptions, anything that cost you real time. Keep the exact error text; these become the course's common-errors list.
-
-## Checkpoint evidence
-
-Show the evidence for every item in the definition of done in `brief.md`, one by one. Paste real output trimmed to the relevant lines, or link a screenshot, and redact anything sensitive.
-
-- DoD-01: After each of the three refactors, a saved plan shows zero destroys and zero replacements (three plan summaries pasted), and at least one of the three checks reads the saved plan's JSON form with `jq` and reports the action on every resource (output pasted), not a plan read by eye.
-- DoD-02: The renamed resource keeps its real-world identity (its cloud-side identifier is unchanged); the adopted resource is in state and described by configuration, and a plan after adoption shows no changes; the stop-managing resource still exists in AWS afterwards and Terraform no longer tracks it.
-- DoD-03: Each refactor is a reviewable change in configuration (the diff is in your evidence), and your notes list every command you ran against state and what each one did, not only the ones that changed something.
-- DoD-04: Your note on legacy imperative commands says when you will meet them and what the declarative equivalent is.
-- DoD-05: You caused an apply to stop part-way, captured the error and what state holds afterwards, and brought the configuration back to a clean plan without editing state by hand (output pasted); your notes also say what to do after a failed destroy.
-- DoD-06: No billable resource is left behind, and only the M02 bucket remains.
-- DoD-07: Your write-up takes a first-time learner to a rename, an adoption and a stop-managing with no destroys unaided — verified by you following it end to end from a clean state.
-
-## Definition-of-done self-assessment
-
-Score yourself honestly against every item in the definition of done in `brief.md` before your trainer reviews it: met, partly met or not met, and why. Then rate yourself against each criterion of the stage rubric in the README. Name any part of your own work you would struggle to explain cold, without re-reading it first.
-
-## What I'd do differently
-
-If you started this stage over today, what would you change?
+*   **Friction Log (What tripped me up):** Where did you spend the most time, and why? What didn't behave the way you expected the first time? (Keep the exact error texts and how you resolved them).
+*   **What I'd do differently:** If you started this stage over today, what is the single biggest change you'd make to your approach?
+*   **DoD Self-Assessment:** Rate yourself honestly against every item in the DoD (Met, Partly Met, Not Met) and the stage rubric.
+*   **Blind Spots:** Name any part of your own work you would struggle to explain cold right now, without re-reading it first.
