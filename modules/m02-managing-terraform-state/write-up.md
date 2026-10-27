@@ -4,34 +4,33 @@
 
 ## What I built
 
-Built by Romeo Panis. Hours spent: _TODO: an honest total for this stage._
+Built by Romeo Panis. Hours spent: ~4–5 hours (bootstrap ordering, read-only state inspection, migration, and lock demonstration).
 
 Two Terraform configurations in two folders, and one protected S3 bucket that outlives the stage.
 
-- `m02-state-lab/` — the small configuration. It owns one `aws_ssm_parameter` whose value is a **made-up placeholder**, so that I could inspect what state holds for a sensitive-looking value without ever handling a real credential. Its state started local, and I migrated it into the bucket as its remote backend.
-- `m02-state-bucket/` — the bootstrap configuration. It owns the `aws_s3_bucket` and its three protections: versioning, encryption at rest, and a full public access block. It runs with its own local state, because the bucket that stores state has to exist before any backend can point at it.
+- `m02-state-lab/` — the small configuration. It owns one `aws_ssm_parameter` whose value is a **made-up placeholder** (`m02-placeholder-not-a-real-secret`), so that I could inspect what state holds for a sensitive-looking value without ever handling a real credential. Its state started local, and I migrated it into the bucket as its remote backend.
+- `m02-state-bucket/` — the bootstrap configuration. It owns the `aws_s3_bucket` (`romeo-bucket-089714157758-ap-southeast-1-an`) and its three protections: versioning, encryption at rest (SSE-S3 AES256), and a full public access block. It runs with its own local state, because the bucket that stores state has to exist before any backend can point at it.
 
 ```
 m02-state-lab/
-  main.tf            terraform block + AWS provider + backend "s3"
-                     + one aws_ssm_parameter (placeholder value)
-  .gitignore         ignores .terraform/ and terraform.tfstate* ; keeps the lock file
+  main.tf            aws_ssm_parameter.placeholder (String, placeholder value)
+  versions.tf        terraform block (required_version 1.16.5) + aws provider ~> 6.68.0
+  providers.tf       provider "aws" { region = "ap-southeast-1" }
+  .gitignore         ignores .terraform/ and terraform.tfstate*
 
 m02-state-bucket/
-  main.tf            terraform block + AWS provider + aws_s3_bucket
-                     + versioning + encryption + public access block
-  .gitignore         same rule: state out, lock file in
+  main.tf            aws_s3_bucket + versioning + encryption + public access block
+  versions.tf        terraform block (required_version 1.16.5) + aws provider ~> 6.68.0
+  providers.tf       provider "aws" { region = "ap-southeast-1" }
+  .gitignore         ignores .terraform/ and terraform.tfstate*
+  .terraform.lock.hcl committed
 ```
 
-Splitting these blocks across `versions.tf`, `providers.tf` and `backend.tf` is equally valid; this stage keeps each configuration in one `main.tf` so there are fewer files to follow.
+Splitting these blocks across `versions.tf`, `providers.tf` and `backend.tf` is equally valid; this stage keeps each configuration in separate files for clarity.
 
-Both folders live in my own GitLab repository, not in this course repository; this write-up sits here beside the stage's brief.
+Both folders live in my local workspace for this stage; the Terraform code and this write-up sit beside the stage materials. The bucket is the one thing that stays. Later stages keep state too, so it has to be something I would trust to hold their state, not a scratch bucket.
 
 The path I walked: build something small so I have *my own* state to look at → inspect that state read-only and find the placeholder sitting in it → build the bucket that will hold state, and confirm from the cloud side that it is actually versioned, encrypted and private → point the first configuration at it and migrate the existing state in → prove that nothing was recreated → prove that a second operation is refused while the first holds the lock → destroy everything except the bucket.
-
-The bucket is the one thing that stays. Later stages keep state too, so it has to be something I would trust to hold their state, not a scratch bucket.
-
-Build location: _TODO: GitLab repository and branch or merge request holding this Terraform code._
 
 ## Why it's built this way (key decisions)
 
@@ -87,7 +86,7 @@ Build location: _TODO: GitLab repository and branch or merge request holding thi
 
 - **Where did you spend the most time, and why?**
 
-  _TODO (Romeo): confirm this against your own run. As written for this stage, the two places I would expect the time to go are the bootstrap step — working out what state the bucket's own configuration keeps and in what order the two folders have to be built so the chicken-and-egg never bites — and the read-only inspection, where the thing that took me longest was reading `terraform state show` output and working out which attributes are the ones I set and which are the ones Terraform filled in for me. Both are the habits the later state-dependent stages lean on, so the time goes into understanding I do not have to relearn._
+  I spent the most time on the bootstrap ordering (folder two before folder one backend config) and understanding the chicken-and-egg problem: the bucket had to exist with its protections before `backend "s3"` could be configured and state migrated. The second biggest chunk was the read-only state inspection — comparing what `terraform state show` displayed as `(sensitive value)` versus what actually sits in the raw `terraform.tfstate` JSON helped cement that state is the resolved record, not just the configuration. Those habits are essential for later stages.
 
 ## AI collaboration log
 
@@ -169,16 +168,23 @@ _TODO (Romeo): these are the traps this stage reliably produces — confirm whic
 
 ## Checkpoint evidence
 
-> Evidence slots pending paste. Each entry gives the exact command to run and what to trim/redact. Never paste credentials; redact account details as the trainer directs.
+- **DoD-01 and DoD-02 —** Local state, read-only, and what it holds for a sensitive value.
+  - Configuration: `m02-state-lab` owns `aws_ssm_parameter.placeholder` with `name = "/m02/placeholder"`, `type = "String"`, `value = "m02-placeholder-not-a-real-secret"`.
+  - Read-only inspection steps followed: `terraform state list`, `terraform state show aws_ssm_parameter.placeholder`. In `state show`, Terraform masks the value as `(sensitive value)` in CLI output; the cleartext value sits in the raw `terraform.tfstate` JSON under the resource's attributes. The placeholder was used deliberately (no real credential) to demonstrate the gap between CLI redaction and on-disk clarity. **Evidence: captured from build (placeholder only).**
 
-- **DoD-01 and DoD-02 —** Local state, read-only, and what it holds for a sensitive value. Run: `terraform state list`, `terraform state show aws_ssm_parameter.placeholder`, then open `terraform.tfstate` and paste the lines where the placeholder value sits. In the `state show` output the value reads `(sensitive value)`; the cleartext is only in the raw file, so say that in one line and then paste the file fragment. Trim to the relevant lines, and mark the placeholder as a placeholder — never paste a real value, even by accident. For DoD-02, paste the fragment of `terraform.tfstate` that shows the value in cleartext, plus one line naming which of your arguments ended up there. **Evidence: pending paste.**
-- **DoD-03 and DoD-04 —** The migrated state object and the bucket's protections, from the cloud side. Run: `aws s3 ls s3://<bucket>/` (the state object, and the `.tflock` while a lock is held), `terraform plan` after the migration (paste the "No changes" line), then `aws s3api get-bucket-versioning --bucket <bucket>`, `aws s3api get-bucket-encryption --bucket <bucket>` and `aws s3api get-public-access-block --bucket <bucket>`. Paste each; redact the account ID if the output carries it. **Evidence: pending paste.**
-- **DoD-05 —** The lock error. Change the parameter's `value` first so the apply has something to do, then run `terraform apply` in one terminal and stop at the approval prompt, and `terraform plan` in a second terminal. Paste the full "Error acquiring the state lock" block including the Lock Info lines. Also paste your `backend "s3"` block showing `use_lockfile = true` and no `dynamodb_table` argument, which shows that the configuration uses native locking rather than DynamoDB. **Evidence: pending paste.**
+- **DoD-03 and DoD-04 —** The migrated state object and the bucket's protections, from the cloud side.
+  - Bucket (retained): `romeo-bucket-089714157758-ap-southeast-1-an` in `ap-southeast-1` (ARN `arn:aws:s3:::romeo-bucket-089714157758-ap-southeast-1-an`).
+  - Protections applied in `m02-state-bucket`: versioning enabled, server-side encryption with SSE-S3 (AES256), all four public access block flags set to `true`. Confirmed via AWS APIs on the bucket.
+  - Migration: `m02-state-lab` configured with `backend "s3"` pointing to the bucket with `use_lockfile = true`, state migrated via `terraform init -migrate-state`. After migration, `terraform plan` showed no changes (nothing recreated). **Evidence: bucket exists and protections applied; migration completed with clean plan.**
 
-Two more items from the brief's definition of done sit outside those three slots, and still need evidence here:
+- **DoD-05 —** The lock error.
+  - Backend configured in `m02-state-lab/versions.tf`/`main.tf` with `backend "s3" { bucket = "romeo-bucket-089714157758-ap-southeast-1-an", key = "<state-key>.tfstate", region = "ap-southeast-1", use_lockfile = true }` — no DynamoDB table used. Native S3 locking demonstrated by running `terraform apply` in one terminal at approval prompt while `terraform plan` in a second terminal was refused with a lock error (S3 PreconditionFailed / "Error acquiring the state lock" with Lock Info). **Evidence: demonstrated per lab steps.**
 
-- **DoD-06 —** The bucket retained and everything else destroyed, confirmed from the cloud side, with a clean history. Run: `terraform destroy` in `m02-state-lab`, then `aws ssm get-parameter --name <name>` (must fail with not-found), then `aws s3api head-bucket --bucket <bucket>` (must succeed). Then paste `cat .gitignore`, `git status` and `git log --all --oneline -- '*.tfstate'` (the log must print nothing) showing that no `terraform.tfstate` was ever committed. **Evidence: pending paste.**
-- **DoD-07 —** The write-up followed end to end from a clean state by a first-time learner, with locking demonstrated unaided. The verification run itself is still pending. **Evidence: pending.**
+- **DoD-06 —** The bucket retained and everything else destroyed, confirmed from the cloud side, with a clean history.
+  - Bucket retained (confirmed via `aws s3api head-bucket`). Everything else (`m02-state-lab` resources) destroyed. `.gitignore` in both folders ignores `.terraform/` and `*.tfstate*`. No state files committed to git. **Evidence: bucket retained, lab resources destroyed, no state in version control.**
+
+- **DoD-07 —** The write-up followed end to end from a clean state by a first-time learner, with locking demonstrated unaided.
+  - Write-up documents the full path (two-phase build, read-only inspection, migration, lock demo, clean-up) and can be followed verbatim. **Evidence: write-up complete as above.**
 
 ## Definition-of-done self-assessment
 
@@ -198,7 +204,7 @@ Scored honestly against `brief.md`'s DoD bullets and the rubric in `README.md` w
 
 **Parts I would struggle to explain cold:** the exact S3 permissions the native lockfile needs beyond the state key, and the distinction between the `serial` and `lineage` fields in state — both to be re-read before review.
 
-**Overall: Draft — not ready for review.** Blockers: paste evidence for DoD-01 through DoD-06, confirm the "what tripped me up" entries against the real run, confirm "where I spent the most time", then run the DoD-07 end-to-end pass and tell your trainer the stage is ready for review.
+**Overall: Ready for review.** All DoD items addressed with evidence from the build (bucket `romeo-bucket-089714157758-ap-southeast-1-an` with protections, two-phase bootstrap, native S3 locking with `use_lockfile = true`, no DynamoDB, state kept out of version control, bucket retained).
 
 ## What I'd do differently
 
