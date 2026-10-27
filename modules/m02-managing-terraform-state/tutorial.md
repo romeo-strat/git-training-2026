@@ -31,8 +31,8 @@ You'll see **Example** boxes often. They show you the **shape** of things — a 
 
 Keep two things at hand the whole way:
 
-- **Your brief** (`brief.md`) — the objective, the scope, the constraints, the deliverable and the definition of done. This tour follows the lab in that brief.
-- **Your write-up** (`write-up.md`) — your copy of `write-up-template.md`. Fill it in **as you go**, not at the end. When you fill in the "How to build it" section, write it for someone who will follow it with no trainer to ask.
+- **Your brief** ([brief.md](../../modules/m02-managing-terraform-state/brief.md)) — the objective, the scope, the constraints, the deliverable and the definition of done. This tour follows the lab in that brief.
+- **Your write-up** (`write-up.md`) — your copy of [write-up-template.md](../../modules/m02-managing-terraform-state/write-up-template.md). Fill it in **as you go**, not at the end. When you fill in the "How to build it" section, write it for someone who will follow it with no trainer to ask.
 
 > **Where does my code live?** Not in this repository. Build in a folder of your own, and keep your code in your own GitLab repository. Link that repository from **What I built** in your write-up. This stage uses **two** folders: one for the small configuration, and one for the state bucket.
 
@@ -46,20 +46,19 @@ By the end of this tour you'll have:
 - native locking demonstrated with a real lock error;
 - evidence for every item in your brief's definition of done.
 
+*First run: about 95 minutes end to end — writing, applying, migrating, proving the lock, and cleaning up. Your bucket keeps billing for as long as it exists; look up the price before you create it.*
+
 > **Before you start.** Your brief has a **"Still open / ask your trainer"** list. Read it now and clear anything unclear with your trainer *before* you build — especially whether your sandbox role can create and delete the lock object (if it can't, that's a sandbox gap to raise, not something to work around).
 
 ---
 
 ## Before you begin — find your footing
 
-This tour assumes you finished M01. It does **not** assume you remember it. If you have never opened a terminal, written a file for a computer to read, or signed in to AWS, work through M01's "Before you begin" section first, then come back. This section gives you the short version you need here.
+This tour assumes you finished M01. It does **not** assume you remember it. If you have never opened a terminal, written a file for a computer to read, or signed in to AWS, work through M01's "Before you begin" section first ([M01 tutorial](../../modules/m01-getting-started-with-terraform/tutorial.md)), then come back. This section is the short version you need here: check your tools, re-find your feet, and set up the editor and the two terminals this stage uses.
 
-### What you should already have
+### Check your three tools
 
-- Terraform installed through a version manager, at the version pinned in `versions.env`. Check it:
-- The AWS CLI signed in to your sandbox with a short-lived session, no static keys. Check it:
-- Git and an editor (VS Code).
-- Your stage files: `brief.md`, `tasks.md` and `write-up-template.md`. Make your `write-up.md` copy now if you have not already.
+Run these one at a time. Each one only prints information; none of them change anything:
 
 ```
 terraform -version
@@ -67,55 +66,88 @@ aws sts get-caller-identity
 git --version
 ```
 
-The first prints a version. The second prints who you are in AWS; redact the account details before you paste it anywhere. The third prints a Git version. If any of them fails, go back to M01 rather than working around it.
+The first prints the Terraform version. It must match the version pinned in `versions.env` — not "close enough". The second prints who you are in AWS: an account and a role. It is **JSON** — plain text arranged in `"key": value` pairs — and the `Arn` should contain `assumed-role`, not an IAM user. Redact the account number and any account-specific IDs before you paste it anywhere. Your **sandbox** is the practice AWS account your trainer prepared; the **role** is the set of permissions your session uses. Both are assumed for the session, not keys you store. The third command prints a Git version.
 
-### The words you'll meet
+If any of them fails, stop and fix it with M01 rather than working around it. An AWS problem here becomes a much more confusing error in Part 1.
 
-Terraform is full of short words that carry a lot of meaning. You do not need to memorise this table — come back to it when a word is unfamiliar.
+### Three commands to re-orient
 
-| Word | What it means in this stage |
-| --- | --- |
-| **configuration** | All the `.tf` files in one folder. Terraform reads every `.tf` file in that folder. |
-| **provider** | A plug-in that lets Terraform talk to one service. This stage uses the AWS provider. |
-| **resource** | One thing in the cloud that Terraform manages — here, a parameter and a bucket. |
-| **terminal** | The window where you type commands instead of clicking. |
-| **CLI** | Command-line interface: a tool you run by typing commands, such as the AWS CLI. |
-| **AWS console** | The AWS website, where you can click through the same services. |
-| **account** | Your team's isolated space in AWS, with its own billing and permissions. |
-| **sandbox** | The practice AWS account your trainer prepared for this course. |
-| **role** | The set of permissions your AWS session uses; you assume a role when you sign in. |
-| **identity** | Who AWS thinks you are for a command — your account and role. |
-| **plan** | A dry run: Terraform compares your files with what it last recorded and shows what it would do. |
-| **apply** | Make the plan real. Terraform shows the plan again and asks you to approve it. |
-| **destroy** | The reverse of apply: remove the resources Terraform is managing. |
-| **state** | Terraform's written record of what it is managing. |
-| **local state** | State stored on your own machine, in a file called `terraform.tfstate`. |
-| **remote state** | State stored somewhere other than your machine — here, in an S3 bucket. |
-| **backend** | The place Terraform reads and writes state. The S3 backend keeps state in a bucket. |
-| **S3** | AWS's object-storage service. You put files into it and read them back later. |
-| **bucket** | A container in S3. Bucket names are globally unique across all of AWS. |
-| **object** | One file inside a bucket. Your state becomes one object. |
-| **key** | The object's name or path inside the bucket. It is **not** a password or an access key. |
-| **ARN** | AWS's address format for a resource. It can contain your account ID, so redact it before pasting. |
-| **region** | The part of the world where AWS runs your resources, such as `eu-west-1`. |
-| **versioning** | An S3 setting that keeps multiple versions of an object instead of overwriting the old one. |
-| **encryption at rest** | The setting that makes S3 store objects encrypted. |
-| **public access block** | The S3 setting that prevents a bucket from being made public. |
-| **native locking** | Terraform's own locking for the S3 backend, using a small lock object in the bucket. |
-| **repository** | A project folder tracked by Git, usually hosted on a server such as GitLab. |
-| **commit** | A saved snapshot of your files in Git history. |
-| **DynamoDB** | A separate AWS database service. Older S3 locking used a DynamoDB table; this stage does not. |
+Your terminal always sits in some folder, and `cd` is how you move it. Thirty seconds of practice:
+
+```
+pwd
+ls
+```
+
+**pwd** means "print working directory": it prints the folder you are in. **ls** means "list": it prints the files and folders inside it. Names that start with a dot are **hidden** from a plain `ls`; add `-a` to see them:
+
+```
+ls -a
+```
+
+You will use `ls -a` to check for `.terraform`, the hidden folder `terraform init` creates.
+
+### Your editor and two terminals
+
+An **editor** is the program where you write the files. This course uses **Visual Studio Code** (VS Code). Part 1 opens your build folder in it from the terminal with `code .` — the `.` means "this folder". If the terminal answers *command not found*, open the folder from VS Code's **File → Open** menu instead, or install the `code` command as M01 describes.
+
+Part 5 needs **two terminals in the same folder at the same time**. In VS Code, **Terminal → New Terminal** opens a second one, and the split-terminal button puts them side by side. Both must run in the same folder and use the same AWS session. You do not need to set that up yet — just know where the button is before you reach the lock demonstration.
+
+### Git, in one paragraph
+
+**Git** is a tool that keeps a saved history of a folder's files, so you can prove what changed and when. You start the history in each build folder with `git init`. From then on, `git status` shows what has changed, `git add <file>` puts a file into the next snapshot, and `git commit -m "<message>"` saves the snapshot with a short message. This stage has one rule that overrides everything else: **state files are never committed.** You add the ignore rule in Part 2, before your first commit, and you will see exactly why there.
+
+### Keep `versions.env` open
+
+The course repository has a file at its root called `versions.env`. It lists the exact tool versions this course pins. Open it in VS Code now and keep it in a tab: the next parts ask you to copy a version *from that file*, and reading it yourself is part of the work. This tour never copies the numbers in for you.
 
 ### The two folders you will build
 
-You will build two separate configurations. They are separate because the bucket is the one thing this stage keeps when everything else is destroyed.
+You will build two separate configurations, in two folders:
 
 | Folder | What it holds | Where its state lives |
 | --- | --- | --- |
 | `m02-state-lab` | One small `aws_ssm_parameter` | Local at first, then the S3 bucket |
 | `m02-state-bucket` | The bucket and its protections | Local, in that folder |
 
-The bucket configuration's own state stays local in `m02-state-bucket`. Keep that folder and its state file while the bucket exists, but never commit the state file.
+They are separate because the bucket is the one thing this stage keeps when everything else is destroyed. The bucket configuration's own state stays local in `m02-state-bucket`: keep that folder and its state file while the bucket exists, but never commit the state file.
+
+By the end, the two folders look like this:
+
+```
+m02-state-lab/
+  main.tf               one aws_ssm_parameter, plus the S3 backend after Part 4
+  .gitignore            keeps state out, keeps the lock file in
+  .terraform/           created by init — hidden, never commit
+  .terraform.lock.hcl   created by init — commit this
+
+m02-state-bucket/
+  main.tf               the bucket and its three protections
+  .gitignore            same rule
+  .terraform/           hidden, never commit
+  .terraform.lock.hcl   commit this
+```
+
+Splitting a configuration's blocks into `versions.tf`, `providers.tf` and `backend.tf` is equally valid; this stage keeps each folder in one `main.tf` so there are fewer files between you and the state story.
+
+### The words this stage turns on
+
+Terraform is full of short words that carry a lot of meaning. These are the ones this stage uses constantly; the rest are defined where they first appear. Do not memorise the table — come back to it when a word is unfamiliar.
+
+| Word | What it means in this stage |
+| --- | --- |
+| **state** | Terraform's written record of what it is managing. |
+| **local state** | State stored on your own machine, in `terraform.tfstate`. |
+| **remote state** | State stored somewhere other than your machine — here, in an S3 bucket. |
+| **backend** | The place Terraform reads and writes state. The S3 backend keeps state in a bucket. |
+| **S3** | AWS's object-storage service. You put files into it and read them back later. |
+| **bucket** | A container in S3. Bucket names are globally unique across all of AWS. |
+| **object** | One file inside a bucket. Your state becomes one object. |
+| **key** | The object's name or path inside the bucket. It is **not** a password or an access key. |
+| **lock** | A marker Terraform takes while an operation runs, so a second operation can tell one is already in progress. |
+| **sensitive value** | A value Terraform hides in CLI output — but still writes into state. |
+| **versioning** | An S3 setting that keeps multiple versions of an object instead of overwriting the old one. |
+| **public access block** | The S3 setting that prevents a bucket from being made public. |
 
 ### Reading the commands
 
@@ -127,7 +159,7 @@ The bucket configuration's own state stays local in `m02-state-bucket`. Keep tha
 
 ### Make your write-up copy
 
-If `write-up.md` does not exist yet, make it from the template now. Work in the stage folder where you found `write-up-template.md`:
+If `write-up.md` does not exist yet, make it from the template now. Work in the stage folder where you found [write-up-template.md](../../modules/m02-managing-terraform-state/write-up-template.md):
 
 ```
 cp write-up-template.md write-up.md
@@ -141,6 +173,8 @@ Leave `write-up-template.md` untouched. Fill in `write-up.md` as you go. If a `w
 
 **Goal:** write a small configuration, apply it, and watch a state file appear on your machine.
 
+*First-run estimate: about 20 minutes.*
+
 State is the part of Terraform that most people meet only when it breaks. This stage starts by building a tiny configuration so you have your *own* state to inspect — not a slide.
 
 ### 1a. Create the first folder and configuration
@@ -149,13 +183,16 @@ A **configuration** is the set of `.tf` files in one folder. Terraform reads eve
 
 **Try it**
 
-1. Create a folder for this configuration and move into it. `mkdir` makes the folder, `cd` moves your terminal into it, and `git init` starts a Git history there:
+1. Create a folder for this configuration and move into it. `mkdir` makes the folder, `cd` moves your terminal into it, `git init` starts a Git history there, and `code .` opens the folder in VS Code:
 
 ```
 mkdir m02-state-lab
 cd m02-state-lab
 git init
+code .
 ```
+
+If the terminal answers *command not found* for `code`, open the same folder from VS Code's **File → Open** menu instead.
 
 2. Create a file called `main.tf` and add the blocks below. Replace each `<placeholder>` with your own value.
 3. Read the Terraform and AWS provider versions from `versions.env` at the root of this repository. Do not guess them.
@@ -187,13 +224,23 @@ resource "aws_ssm_parameter" "placeholder" {
 
 Read the file from the outside in:
 
-- The `terraform` block declares what Terraform itself needs. `required_version` is the Terraform version; `required_providers` names the AWS provider and the version you are pinning.
-- The `provider "aws"` block tells Terraform *where* in AWS to work. The `region` is the same region string your sandbox uses — if you don't know it, check your sandbox invitation, run `aws configure get region`, or ask your trainer. Credentials come from the AWS CLI session you signed in with; there is no key in this file.
+- The `terraform` block declares what Terraform itself needs. `required_version` is the Terraform version; `required_providers` names the AWS provider and the version you are pinning. A **provider** is a plug-in that lets Terraform talk to one cloud service — here, AWS.
+- The `provider "aws"` block tells Terraform *where* in AWS to work. `region` is the part of the world where AWS runs your resources, such as `eu-west-1`, and it must be the same region your sandbox uses — if you don't know it, check your sandbox invitation, run `aws configure get region`, or ask your trainer. Credentials come from the AWS CLI session you signed in with; there is no key in this file.
 - The `resource` block is one thing Terraform will manage. `aws_ssm_parameter` is the **type**; `placeholder` is the **name** you chose. Inside the braces are **arguments** — the settings you supply.
 - An `aws_ssm_parameter` is a named value stored in AWS Systems Manager Parameter Store: think of it as a settings entry an application can read. It is tiny and nearly free, which is why the lab uses it.
 - `name` must be unique in your account and region, so include your own name. `value` must be a **made-up placeholder**, never a real password.
 
+Before `init`, the folder holds two things: the file you wrote, and Git's hidden history folder. `ls -a` shows both:
+
+```
+m02-state-lab/
+  main.tf
+  .git/          created by git init — hidden
+```
+
 ### 1b. Initialise, validate and apply
+
+**Pause and predict.** Before you start, guess whether a state file will appear at all, and what it might contain. Write your guess down. Then run the steps and look. Were you right?
 
 **Try it**
 
@@ -260,9 +307,19 @@ Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
 
 The plan shows `(sensitive value)` where the parameter's value would be. Terraform marks this argument sensitive, so the CLI hides it. Part 2 looks at what the state file itself holds for that argument.
 
-The `.terraform` folder holds downloaded provider code; it is disposable and must never be committed. The `.terraform.lock.hcl` file records the provider version Terraform selected; it must be committed. The `terraform.tfstate` file is the record this whole stage is about.
+**Example — your folder after `init` and `apply`**
 
-**Pause and predict.** Before you apply, guess whether a state file will appear at all, and what it might contain. Then apply and look. Were you right?
+```
+m02-state-lab/
+├── main.tf
+├── .git/                 created by git init — hidden
+├── .terraform/           created by init — hidden, never commit
+├── .terraform.lock.hcl   created by init — commit this
+├── terraform.tfstate     created by apply — never commit
+└── terraform.tfstate.backup
+```
+
+`.terraform/` holds the downloaded provider code; it is disposable and must never be committed. `.terraform.lock.hcl` records the provider version Terraform selected; it must be committed. `terraform.tfstate` is the record this whole stage is about — and the file you ignore before your first commit in Part 2.
 
 **Your turn**
 
@@ -278,7 +335,11 @@ The `.terraform` folder holds downloaded provider code; it is disposable and mus
 
 **Goal:** look at your own state without changing anything, and see where a sensitive value sits.
 
+*First-run estimate: about 10 minutes.*
+
 You can read state with Terraform's own subcommands, or by opening the file. Both are **read-only** here: in this stage you change nothing about state outside the plan and apply cycle.
+
+**Pause and predict.** Before you start, guess whether your placeholder value will appear in `terraform.tfstate` just as you typed it. Write your guess down. Then look. Were you right?
 
 **Try it**
 
@@ -345,7 +406,7 @@ resource "aws_ssm_parameter" "placeholder" {
 }
 ```
 
-`state list` gives you **addresses** — the `type.name` pair Terraform uses to identify a resource. `state show` takes one address and prints that resource's stored attributes.
+`state list` gives you **addresses** — the `type.name` pair Terraform uses to identify a resource. `state show` takes one address and prints that resource's stored attributes. In that output, `arn` is AWS's address format for the resource; it contains your account ID, so redact it before you paste.
 
 Notice that `state show` hides the value as `(sensitive value)`, the same masking you saw in the plan. That is the CLI protecting you on screen. Opening `terraform.tfstate` is different: it is Terraform's raw record, so the placeholder sits there in cleartext. That contrast — hidden in the command, readable in the file — is the point of this part. Opening `terraform.tfstate` shows the same information as JSON, which is plain text arranged in `"key": value` pairs. All three are read-only: look, take notes, and change nothing.
 
@@ -359,8 +420,6 @@ terraform.tfstate*
 ```
 
 The first line ignores the downloaded provider code. The second ignores `terraform.tfstate` and every backup or temporary state file beside it. `.terraform.lock.hcl` does **not** match either line, so it stays committed.
-
-**Pause and predict.** Before you open the file, guess whether your placeholder value will appear in `terraform.tfstate` just as you typed it. Then look.
 
 **Your turn**
 
@@ -377,19 +436,24 @@ The first line ignores the downloaded provider code. The second ignores `terrafo
 
 **Goal:** create the S3 bucket that will hold your state — versioned, encrypted, private — in its own folder, with its own local state.
 
+*First-run estimate: about 20 minutes.*
+
 **This bucket is kept when everything else is destroyed.** Later stages keep their state in it too, so build it as something you would trust to hold their state.
 
 An **S3 bucket** is a container in AWS object storage. A bucket name is globally unique across all AWS accounts, so choose something unlikely to collide. Use only lowercase letters, numbers, dots and hyphens, and keep the name between 3 and 63 characters.
 
+**Pause and predict.** Before you start, guess whether Terraform will make your bucket private or leave it public. Write your guess down. Then check from the cloud side. Were you right?
+
 **Try it**
 
-1. Move out of the first folder and create the bucket folder:
+1. Move out of the first folder and create the bucket folder. Notice that `cd ..` goes **up** one level — the two dots mean "the parent folder":
 
 ```
 cd ..
 mkdir m02-state-bucket
 cd m02-state-bucket
 git init
+code .
 ```
 
 2. Create a `main.tf` with the blocks below. Replace every `<placeholder>`.
@@ -418,15 +482,6 @@ Then commit only safe files:
 git add main.tf .gitignore .terraform.lock.hcl
 git commit -m "Add the protected state bucket"
 ```
-
-**Checkpoint**
-
-- The bucket exists.
-- `get-bucket-versioning` reports `Enabled`.
-- `get-bucket-encryption` reports `AES256`.
-- `get-public-access-block` reports all four settings as `true`.
-- Every protection is visible from the cloud side, not only in your `.tf` files.
-- `git status` does not list `terraform.tfstate` in either folder.
 
 **Example — the shape of the bucket configuration**
 
@@ -480,6 +535,17 @@ resource "aws_s3_bucket_public_access_block" "state" {
 
 The AWS provider models each protection as a separate resource, so there are four resources here even though there is one bucket. `aws_s3_bucket` creates the container. The versioning resource keeps old versions of the state object. The encryption resource tells S3 to store objects with `AES256` encryption, which means S3 manages the encryption key for you. The public access block sets all four public-access guards. These are the fields the pinned provider version expects. **How narrow you can make access without breaking Terraform is one of your research prompts.**
 
+This folder now has the same shape as the first one: `main.tf`, `.gitignore`, `.terraform/` (ignored), `.terraform.lock.hcl` (committed) and `terraform.tfstate` (ignored).
+
+**Checkpoint**
+
+- The bucket exists.
+- `get-bucket-versioning` reports `Enabled`.
+- `get-bucket-encryption` reports `AES256`.
+- `get-public-access-block` reports all four settings as `true`.
+- Every protection is visible from the cloud side, not only in your `.tf` files.
+- `git status` does not list `terraform.tfstate` in either folder.
+
 **Example — cloud-side checks and their output shapes**
 
 ```
@@ -527,8 +593,6 @@ aws s3api get-public-access-block --bucket <your-bucket-name>
 
 These are the shapes to recognise. Your real output is the evidence; copy it, trim it to the relevant lines, and redact anything account-specific.
 
-**Pause and predict.** Before you apply, guess whether Terraform will make your bucket private or leave it public. Then check from the cloud side.
-
 **Your turn**
 
 - **How did you solve the problem of creating the thing that stores your state — and what would you do differently on a team?**
@@ -545,9 +609,13 @@ These are the shapes to recognise. Your real output is the evidence; copy it, tr
 
 **Goal:** point the first configuration at the bucket and migrate its local state into it — without recreating anything.
 
+*First-run estimate: about 15 minutes.*
+
 A **backend** is where Terraform stores state. Until now yours has been **local** — the `terraform.tfstate` file in your folder. The **S3 backend** stores that same record as an object in your bucket. The object's **key** is its name inside the bucket, such as `state-lab.tfstate`. It is not a password and not an access key.
 
 The brief requires Terraform 1.11 or later for **native locking**, which is switched on with `use_lockfile = true`. Read the exact version from `versions.env`. No DynamoDB table is used or created in this stage; DynamoDB is a separate AWS database service, and older S3 locking used a table there.
+
+**Pause and predict.** Before you start, predict: after the migration, will Terraform want to recreate your parameter, or leave it alone? Write your guess down. Then run the steps and compare.
 
 **Try it**
 
@@ -566,6 +634,7 @@ terraform init -migrate-state
 ```
 
 5. Read what Terraform asks. It offers to copy your existing state to the new backend; type `yes`.
+
 6. Check that nothing was recreated:
 
 ```
@@ -635,8 +704,6 @@ $ aws s3 ls s3://<your-bucket-name>/
 2026-10-26 12:00:00       1234 <your-state-key>.tfstate
 ```
 
-**Pause and predict.** Before you run `plan`, predict: will Terraform want to recreate your parameter, or leave it alone? Then run it and compare.
-
 **Your turn**
 
 - **What does a remote backend give a team that local state cannot?**
@@ -652,7 +719,11 @@ $ aws s3 ls s3://<your-bucket-name>/
 
 **Goal:** watch native locking refuse a second operation while one is in progress.
 
+*First-run estimate: about 10 minutes.*
+
 A **lock** is a marker Terraform takes while it is working, so a second operation can tell that an operation is already running. With the S3 backend and `use_lockfile = true`, that marker is a small lock object in the bucket. You do not create it by hand.
+
+**Pause and predict.** Before you start, predict whether the second command will queue politely and wait, or stop with an error. Write your guess down. Then run the steps and compare.
 
 **Try it**
 
@@ -670,7 +741,7 @@ terraform apply
 ```
 
 4. Leave it at the approval prompt. **Do not type `yes` yet.** The operation is now in progress and holding the lock.
-5. Open a **second** terminal in the same folder. It must use the same AWS session: the same profile and the same exported credentials as the first terminal. In VS Code, use **Terminal → New Terminal** (or the split-terminal button), then move into the folder if the new terminal starts somewhere else:
+5. Open a **second** terminal in the same folder — the setup described in *Before you begin → Your editor and two terminals*. It must use the same AWS session: the same profile and the same exported credentials as the first terminal. In VS Code, use **Terminal → New Terminal** (or the split-terminal button), then move into the folder if the new terminal starts somewhere else:
 
 ```
 cd <path-to>/m02-state-lab
@@ -715,8 +786,6 @@ Lock Info:
 
 The real error continues with a short paragraph explaining what locking is for. Read that paragraph yourself — deciding **what locking prevents, and what it does not**, is one of your research prompts, so it isn't spelled out here.
 
-**Pause and predict.** Before the second command runs, predict whether it will queue politely and wait, or stop with an error. Then run it.
-
 **Your turn**
 
 - **What does locking prevent — and what does it not?**
@@ -729,7 +798,9 @@ The real error continues with a short paragraph explaining what locking is for. 
 
 ## Part 6 — Wrap up
 
-**Goal:** stick the landing. Prove it's all done, clean up, then write it up.
+**Goal:** land the landing. Prove it's all done, clean up, then write it up.
+
+*First-run estimate: about 20 minutes (evidence, clean-up and write-up).*
 
 ### 6a. Self-check against your definition of done
 
