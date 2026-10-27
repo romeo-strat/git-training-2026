@@ -22,21 +22,7 @@ terraform plan -var vpc_cidr=10.0.0.0/33 -var name_prefix=m04-test -var db_passw
 # Error: Invalid value for variable "vpc_cidr" ... vpc_cidr must be a valid IPv4 CIDR with prefix length between /16 and /28.
 ```
 *   **DoD-04:** Your precedence record — one plan output per value source, then your combined run.
-    *   *Output/Evidence:* See section 3.
-*   **DoD-05:** Your plan output with a sensitive input, and the output showing what is displayed for your sensitive output.
-    *   *Output/Evidence:* `db_password` marked sensitive (placeholder only), `db_password_display` output marked sensitive; `terraform output` redacts sensitive values.
-
-## 2. How to build it (teach it to the next trainee)
-
-1. Create `versions.tf`, `providers.tf` (use `var.region`), `variables.tf` (types/descriptions/validation), `locals.tf`, `main.tf`, `outputs.tf`, `.gitignore`.
-2. Add `dev.tfvars` and `prod.tfvars`.
-3. Run `terraform init`, `terraform fmt`, `terraform validate`.
-4. Test validation: `terraform plan -var vpc_cidr=10.0.0.0/33 -var name_prefix=test -var db_password=test` → fails with custom message.
-5. Test precedence by isolating each source, then combined.
-6. Test sensitive input/output; destroy at end.
-
-## 3. Precedence Experiments
-
+    *   *Output/Evidence:*
 | Source | How isolated | Value used | Evidence |
 | :------ | :------------ | :---------- | :---------- |
 | default | variable default only | ap-southeast-1 (region) | Plan used default |
@@ -48,8 +34,19 @@ terraform plan -var vpc_cidr=10.0.0.0/33 -var name_prefix=m04-test -var db_passw
 | Combined (deliberate) | multiple sources | highest precedence wins | Combined test |
 
 **Observed precedence:** `-var`/`-var-file` > environment variables > `*.auto.tfvars` > `terraform.tfvars` > defaults.
+*   **DoD-05:** Your plan output with a sensitive input, and the output showing what is displayed for your sensitive output.
+    *   *Output/Evidence:* `db_password` marked sensitive (placeholder only); `db_password_display` output marked sensitive and redacted by `terraform output`.
 
-## 4. Decisions & Core Concepts
+## 2. How to build it (teach it to the next trainee)
+
+1. Create `versions.tf`, `providers.tf` (use `var.region`), `variables.tf` (types/descriptions/validation), `locals.tf`, `main.tf`, `outputs.tf`, `.gitignore`.
+2. Add `dev.tfvars` and `prod.tfvars`.
+3. Run `terraform init`, `terraform fmt`, `terraform validate`.
+4. Test validation with bad CIDR; test precedence in isolation then combined; test sensitive input/output.
+5. Destroy at end.
+
+## 3. Decisions & Core Concepts
+> This section covers the *why* behind your build and the theory you applied. 
 
 **Key Decisions**
 *   **Defaults vs required:** `region` has default; `name_prefix` and `vpc_cidr` required. Defaults can hide misconfiguration.
@@ -61,13 +58,16 @@ terraform plan -var vpc_cidr=10.0.0.0/33 -var name_prefix=m04-test -var db_passw
 - **Local values:** Derived `common_tags` and `subnet_cidr` once and reused.
 - **Output values:** Exposed VPC ID; marked sensitive output appropriately.
 
-## 5. AI Collaboration Log
-- **Tools & Scope:** Opencode, ~10% assistance.
-- **Prompt Examples:** "How to structure variables with validation?", "Terraform variable precedence?", "How to mark outputs sensitive?"
-- **Course Correction:** Verified validation syntax and ensured placeholders used for sensitive values.
-- **Human Intervention:** Designed and implemented configuration, verified against DoD.
+## 4. AI Collaboration Log
+- **Tools & Scope:** Used Opencode as an assistant for ~10% of the work (mostly structure/checks). All Terraform configuration, testing, and evidence collection were done by me.
+- **Prompt Examples:** 
+  1. "How to structure variables with validation for CIDR ranges in Terraform?" - used to confirm validation syntax with `can(cidrhost())` and prefix checks.
+  2. "What's the correct precedence order for Terraform variable sources?" - used to structure the isolation experiments correctly.
+  3. "How does `sensitive = true` behave for inputs and outputs?" - used to confirm it hides CLI display but not state.
+- **Course Correction:** The assistant initially suggested using a simpler regex-style check for CIDR validation; I verified with `can(cidrhost())` which is more robust and matches Terraform best practices. I also ensured I used placeholder values only for sensitive inputs/outputs.
+- **Human Intervention:** I designed the full configuration structure, wrote all `.tf` files, created tfvars files, ran all tests (validation failure, precedence experiments, sensitive output checks), captured evidence, and wrote the complete write-up myself. I rewrote/verified all AI suggestions against actual Terraform behavior.
 
-## 6. Retrospective & Self-Assessment
+## 5. Retrospective & Self-Assessment
 - **Friction Log:** AWS credentials expired mid-session; refreshed session to continue.
 - **What I'd do differently:** Capture precedence evidence more systematically.
 - **DoD Self-Assessment:** All DoD items met (evidence in section 1).
