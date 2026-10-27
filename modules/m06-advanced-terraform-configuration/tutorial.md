@@ -27,15 +27,6 @@ You'll see **Example** boxes often. They show you the **shape** of things — a 
 - An Example never contains the answer to a research prompt. If it looks like it might, it deliberately stops short: the last step is always yours.
 - **Never paste an Example as your own evidence.** Your evidence must be real output from *your* machine. Examples are teaching aids, not proof.
 
-Keep two things at hand the whole way:
-
-- **Your brief** (`brief.md`) — the objective, the scope, the constraints, the deliverable and the definition of done. This tour follows the lab in that brief.
-- **Your write-up** (`write-up.md`) — your copy of `write-up-template.md`. Fill it in **as you go**, not at the end.
-
-> **Where does my code live?** Not in this repository. Build in a folder of your own, and keep your code in your own GitLab repository. Link it from the header of your write-up.
-
-> **Builds on M02, M03 and M04.** You need the state bucket from M02, your network from M03, and your typed, validated variables from M04. If any isn't accepted yet, sort that out before you start.
-
 ## Where you're headed
 
 By the end of this tour you'll have:

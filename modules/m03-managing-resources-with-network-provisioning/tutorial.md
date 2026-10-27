@@ -27,13 +27,6 @@ You'll see **Example** boxes often. They show you the **shape** of things — a 
 - An Example never contains the answer to a research prompt. If it looks like it might, it deliberately stops short: the last step is always yours.
 - **Never paste an Example as your own evidence.** Your evidence must be real output from *your* machine. Examples are teaching aids, not proof.
 
-Keep two things at hand the whole way:
-
-- **Your brief** (`brief.md`) — the objective, the scope, the constraints, the deliverable and the definition of done. This tour follows the lab in that brief.
-- **Your write-up** (`write-up.md`) — your copy of `write-up-template.md`. Fill it in **as you go**, not at the end. When you fill in the "How to build it" section, write it for someone who will follow it with no trainer to ask.
-
-> **Where does my code live?** Not in this repository. Build in a folder of your own, and keep your Terraform code in your own GitLab repository. Link that repository from **What I built** in your write-up.
-
 ## Where you're headed
 
 By the end of this tour you'll have:

@@ -35,7 +35,7 @@ Stop at the gate until the user explicitly approves; one task at a time.
 
 ## File roles
 
-- `tutorial.md` is derived from `brief.md` and `tasks.md`: one Part per lab step, one "Your turn" per research prompt, answers left out.
+- `tutorial.md` is derived from `brief.md` and `tasks.md`: one Part per lab step, one "Your turn" per research prompt, answers left out. Use `docs/templates/tutorial-template.md` as the base structure; no "Keep two things at hand" block, no "Where does my code live?" section.
 - `tasks.md` is generated from the brief (`/trainee-task-planner re-plan <stage>`); don't hand-edit.
 - `write-up-template.md` copies prompts, scope topics and DoD bullets from the brief word for word.
 - Capstone checklist is hand-written from capstone templates, not generated.
