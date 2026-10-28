@@ -23,6 +23,7 @@ terraform plan -var vpc_cidr=10.0.0.0/33 -var name_prefix=m04-test -var db_passw
 ```
 *   **DoD-04:** Your precedence record — one plan output per value source, then your combined run.
     *   *Output/Evidence:*
+    
 | Source | How isolated | Value used | Evidence |
 | :------ | :------------ | :---------- | :---------- |
 | default | variable default only | ap-southeast-1 (region) | Plan used default |
