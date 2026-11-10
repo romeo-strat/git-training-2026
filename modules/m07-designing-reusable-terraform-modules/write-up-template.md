@@ -17,7 +17,9 @@
     *   *Output/Evidence:* 
 
 ## 2. How to build it (teach it to the next trainee)
-> Write a quick guide from repeated configuration to a reusable module called twice from a root configuration. Use your own output/logs to show your reasoning, not just a list of commands. Assume the reader is a peer who hasn't started this stage yet.
+> Write a guide covering the scope below. Use your own output/logs to show your reasoning, not just a list of commands. Assume the reader is a peer who hasn't started this stage yet.
+
+**Guide scope:** from repeated configuration to a reusable module called twice from a root configuration
 
 ## 3. Decisions & Core Concepts
 > This section covers the *why* behind your build and the theory you applied. 
@@ -28,10 +30,12 @@
 *   **How do resource addresses change when something moves into a module, and what would that mean for a configuration that is already deployed?** 
 
 **Concepts Applied**
-> Pick 2–3 ideas from this list: file structure and naming conventions, calling a module more than once, module sources and pinning, consuming a published module, or when a module is the wrong answer. Explain each in your own words based on how you actually used it in this stage. 
+> Pick 2–3 of the ideas below. Explain each in your own words based on how you actually used it in this stage. 
+
+**Ideas this stage covers:** file structure and naming conventions, calling a module more than once, module sources and pinning, consuming a published module, or when a module is the wrong answer.
 
 ## 4. AI Collaboration Log
-> Be specific. If you used no AI, state that in one line.
+> Be specific, and answer each prompt below in as many lines as it needs. Only if you used no AI at all, say so in one line and skip the rest.
 
 *   **Tools & Scope:** Which AI tool(s) did you use, and for roughly what portion of the work?
 *   **Prompt Examples:** Give 2–3 concrete examples of what you asked for.
